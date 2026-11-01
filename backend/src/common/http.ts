@@ -5,9 +5,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { ZodSchema } from 'zod';
+import type { ZodType } from 'zod';
 import type { Role } from '@jes/shared';
 import { config } from '../config';
+import { Db } from '../db';
 
 export interface AuthUser { id: string; role: Role; name: string; email: string }
 
@@ -24,7 +25,7 @@ export const conflict = (code: string, message: string, extra: Record<string, un
 export const forbidden = () => new AppError(403, 'FORBIDDEN', 'Anda tidak memiliki akses');
 
 export class ZodPipe implements PipeTransform {
-  constructor(private schema: ZodSchema) {}
+  constructor(private schema: ZodType) {}
   transform(value: unknown) {
     const r = this.schema.safeParse(value);
     if (r.success) return r.data;
@@ -34,7 +35,7 @@ export class ZodPipe implements PipeTransform {
   }
 }
 
-export const Body$ = (schema: ZodSchema) => new ZodPipe(schema);
+export const Body$ = (schema: ZodType) => new ZodPipe(schema);
 
 const PUBLIC = 'isPublic';
 const ROLES_KEY = 'roles';
@@ -43,26 +44,46 @@ export const OwnerOnly = () => SetMetadata(ROLES_KEY, ['OWNER']);
 
 export const CurrentUser = createParamDecorator((_: unknown, ctx: ExecutionContext): AuthUser => ctx.switchToHttp().getRequest().user);
 
+// typ/aud separate access tokens from other JWTs signed with the same secret, e.g. the OAuth state (SEC-A6)
+const ACCESS = { typ: 'access', aud: 'jes-api' } as const;
+
 export function signAccess(u: AuthUser): string {
-  return jwt.sign({ sub: u.id, role: u.role, name: u.name, email: u.email }, config.jwtSecret, { expiresIn: '15m' });
+  return jwt.sign({ sub: u.id, role: u.role, name: u.name, email: u.email, typ: ACCESS.typ }, config.jwtSecret, { expiresIn: '15m', audience: ACCESS.aud, algorithm: 'HS256' });
 }
+
+/** Verified access-token payload, or null. Also used by the rate limiter to key requests per user. */
+export function verifyAccess(header: string | undefined): jwt.JwtPayload | null {
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    const p = jwt.verify(header.slice(7), config.jwtSecret, { audience: ACCESS.aud, algorithms: ['HS256'] }) as jwt.JwtPayload;
+    return p.typ === ACCESS.typ && p.sub && (p.role === 'OWNER' || p.role === 'STAFF') ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Deactivation and role changes take effect within seconds, not at token expiry (SEC-A13). */
+const userCache = new Map<string, { active: boolean; role: Role; at: number }>();
+export const forgetUser = (id: string) => userCache.delete(id);
 
 /** JWT access guard + role guard on every endpoint (TD §3.4). Owner-only routes are checked server-side. */
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
-  canActivate(ctx: ExecutionContext): boolean {
+  constructor(private reflector: Reflector, private db: Db) {}
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const targets = [ctx.getHandler(), ctx.getClass()];
     if (this.reflector.getAllAndOverride<boolean>(PUBLIC, targets)) return true;
     const req = ctx.switchToHttp().getRequest<Request & { user?: AuthUser }>();
-    const h = req.headers.authorization;
-    if (!h?.startsWith('Bearer ')) throw new AppError(401, 'UNAUTHENTICATED', 'Silakan masuk kembali');
-    try {
-      const p = jwt.verify(h.slice(7), config.jwtSecret) as jwt.JwtPayload;
-      req.user = { id: p.sub!, role: p.role, name: p.name, email: p.email };
-    } catch {
-      throw new AppError(401, 'UNAUTHENTICATED', 'Sesi berakhir, silakan masuk kembali');
+    const p = verifyAccess(req.headers.authorization);
+    if (!p) throw new AppError(401, 'UNAUTHENTICATED', 'Sesi berakhir, silakan masuk kembali');
+    let u = userCache.get(p.sub!);
+    if (!u || Date.now() - u.at > 5000) {
+      const row = await this.db.one(`SELECT active, role FROM users WHERE id = $1`, [p.sub]);
+      u = { active: !!row?.active, role: row?.role, at: Date.now() };
+      userCache.set(p.sub!, u);
     }
+    if (!u.active || u.role !== p.role) throw new AppError(401, 'UNAUTHENTICATED', 'Sesi berakhir, silakan masuk kembali');
+    req.user = { id: p.sub!, role: p.role, name: p.name, email: p.email };
     const roles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, targets);
     if (roles && !roles.includes(req.user.role)) throw forbidden();
     return true;
@@ -91,6 +112,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
     if (err?.code === '23505') {
       res.status(409).json({ code: 'DUPLICATE', message: 'Nama sudah ada' });
+      return;
+    }
+    if (err?.type === 'entity.too.large' || err?.status === 413) {
+      res.status(413).json({ code: 'TOO_LARGE', message: 'Data terlalu besar' });
       return;
     }
     if (err?.type === 'entity.parse.failed') {

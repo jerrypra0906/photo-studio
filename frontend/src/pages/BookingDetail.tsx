@@ -111,7 +111,9 @@ export default function BookingDetail() {
         ) : null}
         {cancelled && b.paidAmount > 0 ? <Banner tone="warn">DP {formatRp(b.paidAmount)} tercatat — selesaikan refund atau hangus di luar aplikasi.</Banner> : null}
         {!cancelled && b.status === 'CONFIRMED' && ended ? (
-          <Banner tone="warn" action={<Button className="min-h-9 py-1 text-sm" onClick={() => setSheet('complete')}>Tandai selesai</Button>}>Sesi sudah lewat.</Banner>
+          <Banner tone="warn" action={owner ? <Button className="min-h-9 py-1 text-sm" onClick={() => setSheet('complete')}>Tandai selesai</Button> : undefined}>
+            {owner ? 'Sesi sudah lewat.' : 'Sesi sudah lewat — Owner akan menandai selesai dan pembayarannya.'}
+          </Banner>
         ) : null}
 
         {/* Breakdown */}
@@ -127,7 +129,7 @@ export default function BookingDetail() {
             <Line label="DP / dibayar" value={b.paidAmount} />
             <Line label="Sisa" value={b.balance} strong accent={b.balance > 0} />
           </div>
-          {b.status === 'COMPLETED' && b.balance > 0 ? <Button variant="secondary" className="w-full" onClick={() => setSheet('payment')}>Catat pembayaran</Button> : null}
+          {owner && b.status === 'COMPLETED' && b.balance > 0 ? <Button variant="secondary" className="w-full" onClick={() => setSheet('payment')}>Catat pembayaran</Button> : null}
         </Card>
 
         {/* Linked costs and margin (FR-27, Owner only) */}
@@ -172,7 +174,7 @@ export default function BookingDetail() {
       <Sheet open={sheet === 'menu'} onClose={() => setSheet(null)} title="Aksi">
         <div className="grid gap-2">
           {canEdit ? <Button variant="secondary" onClick={() => nav(`/bookings/${id}/edit`)}>Ubah / jadwal ulang</Button> : null}
-          {b.status === 'CONFIRMED' ? <Button variant="secondary" onClick={() => setSheet('complete')}>Tandai selesai</Button> : null}
+          {owner && b.status === 'CONFIRMED' ? <Button variant="secondary" onClick={() => setSheet('complete')}>Tandai selesai</Button> : null}
           <Button variant="secondary" onClick={() => nav('/bookings/new', { state: { duplicate: b } })}>Duplikat</Button>
           {b.gcalSyncStatus !== 'NONE' ? <Button variant="secondary" onClick={() => { setSheet(null); retrySync(); }}>Sinkron ulang kalender</Button> : null}
           {b.status === 'CONFIRMED' ? <Button variant="danger" onClick={() => setSheet('cancel')}>Batalkan booking</Button> : null}

@@ -66,10 +66,10 @@ export class HealthController {
     return { ok: true };
   }
 
-  /** DB + queue check (TD §3.5) */
+  /** DB check for the load balancer (TD §3.5). Queue depth is Owner-only via /integrations/google (SEC-F6). */
   @Public() @Get('ready')
   async ready() {
-    const q = await this.db.one(`SELECT count(*)::int AS backlog FROM sync_outbox WHERE done_at IS NULL AND failed_at IS NULL`);
-    return { ok: true, db: true, queueBacklog: q.backlog };
+    await this.db.one(`SELECT 1 FROM sync_outbox LIMIT 1`);
+    return { ok: true };
   }
 }

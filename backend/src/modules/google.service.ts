@@ -46,13 +46,13 @@ export class GoogleService {
 
   /** L2-5.1.2: state is a short-lived signed token naming the Owner who started the flow. */
   authUrl(userId: string) {
-    const state = jwt.sign({ sub: userId, p: 'gcal' }, config.jwtSecret, { expiresIn: '10m' });
+    const state = jwt.sign({ sub: userId, p: 'gcal' }, config.jwtSecret, { expiresIn: '10m', audience: 'jes-gcal-state', algorithm: 'HS256' });
     return this.oauth().generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: SCOPES, state, include_granted_scopes: true });
   }
 
   async callback(code: string | undefined, state: string | undefined, error?: string) {
     try {
-      const p = jwt.verify(state ?? '', config.jwtSecret) as jwt.JwtPayload;
+      const p = jwt.verify(state ?? '', config.jwtSecret, { audience: 'jes-gcal-state', algorithms: ['HS256'] }) as jwt.JwtPayload;
       if (p.p !== 'gcal') throw new Error('bad state');
     } catch {
       return 'error=state';

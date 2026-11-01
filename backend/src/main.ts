@@ -5,9 +5,9 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { AllExceptionsFilter, AuthGuard } from './common/http';
+import { rateLimit, securityHeaders } from './common/rate-limit';
 import { config } from './config';
-import { Db, migrate } from './db';
-import { seed } from './seed';
+import { Db } from './db';
 import { AuthController } from './modules/auth.controller';
 import { BookingsController } from './modules/bookings.controller';
 import { BookingsService } from './modules/bookings.service';
@@ -28,12 +28,17 @@ import { MastersController } from './modules/masters.controller';
 class AppModule {}
 
 async function bootstrap() {
-  await migrate();
-  await seed();
+  // schema, seed and DB roles are applied by the one-shot migrate job (dist/migrate.js) with owner credentials
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false });
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
-  app.use(pinoHttp({ autoLogging: { ignore: (req) => req.url?.endsWith('/health') ?? false }, redact: ['req.headers.authorization', 'req.headers.cookie'] }));
+  app.use(pinoHttp({
+    autoLogging: { ignore: (req) => /\/(health|ready)$/.test(req.url ?? '') },
+    // SEC-G10: the refresh token travels in Set-Cookie, so response headers are redacted too
+    redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'], censor: '[redacted]' },
+  }));
+  app.use(securityHeaders);
+  app.use(rateLimit);
   app.use(cookieParser());
   app.useBodyParser('json', { limit: '200kb' });
   app.setGlobalPrefix('api/v1');

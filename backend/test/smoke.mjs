@@ -1,8 +1,11 @@
 // API smoke test against a running stack: node backend/test/smoke.mjs [baseUrl]
 // Walks the PRD acceptance scenarios that matter most. Creates data; run on a dev database only.
 import assert from 'node:assert/strict';
+import { resetLoginThrottle } from './lib.mjs';
 
-const BASE = (process.argv[2] ?? 'http://localhost:3000') + '/api/v1';
+resetLoginThrottle(); // earlier attack tests may have tripped the per-IP login throttle
+
+const BASE = (process.argv[2] ?? 'http://localhost:8080') + '/api/v1';
 const OWNER = { email: process.env.OWNER_EMAIL ?? 'owner@jes.local', password: process.env.OWNER_PASSWORD ?? '' };
 const STAFF = { email: process.env.STAFF_EMAIL ?? 'staff@jes.local', password: process.env.STAFF_PASSWORD ?? '' };
 
@@ -13,13 +16,21 @@ async function step(name, fn) {
 }
 
 async function api(token, method, path, body, headers = {}) {
+  for (;;) {
+    const r = await once(token, method, path, body, headers);
+    if (r.status !== 429 || r.data?.code !== 'RATE_LIMITED') return r;
+    await new Promise((res) => setTimeout(res, (Number(r.retryAfter) || 5) * 1000 + 200));
+  }
+}
+
+async function once(token, method, path, body, headers) {
   const r = await fetch(BASE + path, {
     method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const type = r.headers.get('content-type') ?? '';
   const data = type.includes('json') ? await r.json() : await r.arrayBuffer();
-  return { status: r.status, data, type };
+  return { status: r.status, data, type, retryAfter: r.headers.get('retry-after') };
 }
 
 const wib = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 86400e3).toISOString().slice(0, 10);

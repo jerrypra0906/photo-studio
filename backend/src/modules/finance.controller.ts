@@ -234,7 +234,12 @@ export class FinanceController {
     const expenses = await this.db.many(
       `SELECT e.paid_on, e.payee, e.note, e.amount, c.name AS category FROM expenses e JOIN expense_categories c ON c.id = e.category_id
         WHERE e.deleted_at IS NULL AND e.status = 'CONFIRMED' AND to_char(e.paid_on, 'YYYY-MM') = $1 ORDER BY e.paid_on`, [month]);
-    const esc = (v: unknown) => { const s = String(v ?? ''); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    // SEC-C5: text cells starting with = + - @ tab or CR are prefixed with ' so spreadsheets don't evaluate them
+    const esc = (v: unknown) => {
+      let s = String(v ?? '');
+      if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+      return /[",\n\r;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
     const rows: unknown[][] = [['Date', 'Client', 'Description', 'Amount']];
     for (const b of bookings) {
       const amt = r.basis === 'BILLED' ? b.total : b.paidAmount;

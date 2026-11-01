@@ -20,7 +20,19 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   async login(@Body(Body$(loginSchema)) body: { email: string; password: string }, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const key = `${req.ip}|${body.email.toLowerCase()}`;
+    const email = body.email.toLowerCase();
+    const key = `${req.ip}|${email}`;
+    // SEC-A9: password spraying — at most 20 failed logins per IP per 10 min, whatever the account
+    const perIp = await this.db.one(
+      `SELECT count(*)::int AS n FROM login_attempts WHERE split_part(key, '|', 1) = $1 AND at > now() - interval '10 minutes'`, [req.ip]);
+    if (perIp.n >= 20) throw new AppError(429, 'LOCKED', 'Terlalu banyak percobaan masuk dari perangkat ini. Coba lagi dalam 10 menit');
+    // SEC-A8: an account is locked after 10 failures in 15 min from any mix of IPs
+    const perAccount = await this.db.one(
+      `SELECT count(*)::int AS n, max(at) AS last FROM login_attempts WHERE split_part(key, '|', 2) = $1 AND at > now() - interval '15 minutes'`, [email]);
+    if (perAccount.n >= 10) {
+      const until = new Date(new Date(perAccount.last).getTime() + 15 * 60_000);
+      throw new AppError(429, 'LOCKED', `Terlalu banyak percobaan. Coba lagi setelah ${until.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB`, { retryAt: until });
+    }
     const fails = await this.db.many<{ at: Date }>(
       `SELECT at FROM login_attempts WHERE key = $1 AND at > now() - interval '25 minutes' ORDER BY at DESC LIMIT 5`, [key]);
     if (fails.length === 5 && fails[0].at.getTime() - fails[4].at.getTime() <= 10 * 60_000) {
@@ -35,7 +47,7 @@ export class AuthController {
       await this.db.many(`INSERT INTO login_attempts(key) VALUES ($1)`, [key]);
       throw new AppError(401, 'BAD_CREDENTIALS', 'Email atau kata sandi salah');
     }
-    await this.db.many(`DELETE FROM login_attempts WHERE key = $1 OR at < now() - interval '1 day'`, [key]);
+    await this.db.many(`DELETE FROM login_attempts WHERE key = $1`, [key]);
     const user: AuthUser = { id: u.id, name: u.name, email: u.email, role: u.role };
     await this.issueRefresh(res, user.id, randomUUID());
     return { accessToken: signAccess(user), user };

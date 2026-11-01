@@ -21,7 +21,8 @@ export default function Home() {
     queryFn: () => api.get<BookingRow[]>(`/bookings?from=${today}&to=${addDays(today, 7)}`),
     refetchInterval: 60_000,
   });
-  const toClose = useQuery({ queryKey: ['bookings', 'to-close'], queryFn: () => api.get<BookingRow[]>('/bookings?toClose=true') });
+  // closing a session records payment, which is Owner-only
+  const toClose = useQuery({ queryKey: ['bookings', 'to-close'], queryFn: () => api.get<BookingRow[]>('/bookings?toClose=true'), enabled: owner });
   const [tipHidden, setTipHidden] = useState(() => localStorage.getItem('jes-gcal-tip') === '1');
 
   const byDay = new Map<string, BookingRow[]>();

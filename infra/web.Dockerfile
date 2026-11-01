@@ -10,7 +10,9 @@ COPY shared shared
 COPY frontend frontend
 RUN npm run build -w frontend
 
-FROM nginx:1.27-alpine
+# unprivileged image: master and workers run as the nginx user, listening on 8080 (SEC-G5)
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY infra/nginx/security-headers.conf /etc/nginx/conf.d/security-headers.inc
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080

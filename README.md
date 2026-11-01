@@ -13,9 +13,11 @@ docker compose up -d --build
 
 | URL | What |
 |---|---|
-| http://localhost:8080 | The app (nginx serves the PWA and proxies `/api`) |
-| http://localhost:3000/api/v1/health | API directly |
-| `localhost:5433` | PostgreSQL 18 (`jes` / password in `.env`) |
+| http://localhost:8080 | The app, and the only entry point (nginx serves the PWA and proxies `/api`) |
+| http://localhost:8080/api/v1/health | API health, through nginx (the API port itself is not published) |
+| `127.0.0.1:5433` | PostgreSQL 18, from this machine only. Admin `jes` (`POSTGRES_PASSWORD`); the app uses `jes_app` (`APP_DB_PASSWORD`) |
+
+`docker compose up` runs a one-shot `migrate` service first (migrations, seed, `jes_app` role). Then the API and worker start with the least-privilege role.
 
 Seeded logins come from `.env` (`SEED_OWNER_*`, `SEED_STAFF_*`). The seed data has the current price list (Studio Only 170K/h, Photo Package 599K/h), photographers, add-ons, expense categories and WhatsApp templates. Fill in the bank details in **Admin → Pengaturan studio** before generating invoices.
 
@@ -32,7 +34,9 @@ infra/      Dockerfiles and nginx config
 
 ```bash
 npm test                                           # pricing unit tests (PRD §6.3 worked examples)
-node backend/test/smoke.mjs http://localhost:8080  # 23 API acceptance checks against the running stack
+node backend/test/smoke.mjs http://localhost:8080  # 23 quick API checks against the running stack
+node backend/test/functional.mjs                   # 145 functional cases, every user story ± (docs/TEST_REPORT.md)
+node backend/test/security.mjs                     # 56 penetration-test cases (docs/SECURITY_REVIEW.md)
 ```
 
 The smoke test creates bookings on random far-future dates and in a random 2025 month, so run it only against a dev database.

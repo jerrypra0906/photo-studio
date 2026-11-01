@@ -37,6 +37,12 @@ async function recurringDrafts() {
   if (r.rowCount) console.log(`created ${r.rowCount} recurring drafts for ${month}`);
 }
 
+/** SEC-F7: login attempts only matter for 25 minutes; keep a day for investigation, then purge. */
+async function housekeeping() {
+  await pool.query(`DELETE FROM login_attempts WHERE at < now() - interval '1 day'`);
+  await pool.query(`DELETE FROM idempotency_keys WHERE created_at < now() - interval '7 days'`);
+}
+
 async function listen() {
   const c = new Client({ connectionString: config.databaseUrl });
   c.on('error', (e) => {
@@ -60,6 +66,8 @@ async function main() {
   await listen();
   setInterval(() => void drain(), 15_000);
   setInterval(() => void recurringDrafts().catch((e) => console.error(e)), 3600_000);
+  setInterval(() => void housekeeping().catch((e) => console.error(e)), 3600_000);
+  await housekeeping().catch((e) => console.error(e));
   await recurringDrafts().catch((e) => console.error(e));
   await drain();
 }

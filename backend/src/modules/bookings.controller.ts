@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Headers, HttpCode, Param, ParseUUIDPipe,
 import type { Response } from 'express';
 import { z } from 'zod';
 import { BookingInput, TEMPLATE_KINDS, TemplateKind, bookingInput, cancelInput, completeInput, paymentInput } from '@jes/shared';
-import { AuthUser, Body$, CurrentUser, badRequest } from '../common/http';
+import { AuthUser, Body$, CurrentUser, OwnerOnly, badRequest } from '../common/http';
 import { BookingsService } from './bookings.service';
 import { DocumentsService } from './documents.service';
 
@@ -59,12 +59,13 @@ export class BookingsController {
     return this.svc.cancel(id, b.reason, b.note, u);
   }
 
-  @Post('bookings/:id/complete') @HttpCode(200)
+  /** Completion records money received and drafts fees, so it is Owner-only like Finance (SEC-B4). */
+  @OwnerOnly() @Post('bookings/:id/complete') @HttpCode(200)
   complete(@Param('id', Id) id: string, @Body(Body$(completeInput)) b: { paidAmount: number }, @CurrentUser() u: AuthUser) {
     return this.svc.complete(id, b.paidAmount, u);
   }
 
-  @Post('bookings/:id/payment') @HttpCode(200)
+  @OwnerOnly() @Post('bookings/:id/payment') @HttpCode(200)
   payment(@Param('id', Id) id: string, @Body(Body$(paymentInput)) b: { paidAmount: number }, @CurrentUser() u: AuthUser) {
     return this.svc.payment(id, b.paidAmount, u);
   }

@@ -5,7 +5,7 @@ import {
   DEFAULT_TEMPLATES, PLACEHOLDERS, TEMPLATE_KINDS, addonInput, bookingTypeInput, expenseCategoryInput, photographerInput,
   settingsInput, unknownPlaceholders, userInput,
 } from '@jes/shared';
-import { AuthUser, Body$, CurrentUser, OwnerOnly, badRequest, conflict, notFound } from '../common/http';
+import { AuthUser, Body$, CurrentUser, OwnerOnly, badRequest, conflict, forgetUser, notFound } from '../common/http';
 import { Db } from '../db';
 
 const Id = new ParseUUIDPipe();
@@ -180,6 +180,7 @@ export class MastersController {
       `UPDATE users SET name=$2, email=$3, role=$4, active=$5, password_hash=coalesce($6, password_hash), updated_at=now()
         WHERE id=$1 RETURNING id, name, email, role, active`, [id, b.name, b.email, b.role, b.active, hash]);
     if (r && (!b.active || hash)) await this.db.many(`UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`, [id]);
+    forgetUser(id);
     return r ?? Promise.reject(notFound('Pengguna'));
   }
 
