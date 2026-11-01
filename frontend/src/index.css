@@ -1,16 +1,16 @@
 @import 'tailwindcss';
 
-/* Warm studio palette; tokens flip for dark mode (PRD §8.1.7). */
+/* Brand palette from the JES Space logo: espresso ink #33210A on cream; tokens flip for dark mode (PRD §8.1.7). */
 @theme {
-  --color-bg: #faf7f4;
+  --color-bg: #faf7f0;
   --color-surface: #ffffff;
-  --color-sunken: #f2ece6;
-  --color-line: #e6ddd5;
-  --color-ink: #2b2522;
-  --color-muted: #6b6460;
-  --color-accent: #8a5a44;
-  --color-accent-ink: #ffffff;
-  --color-accent-soft: #f3e7df;
+  --color-sunken: #f2ede3;
+  --color-line: #e6dfd2;
+  --color-ink: #33210a;
+  --color-muted: #6f6354;
+  --color-accent: #33210a;
+  --color-accent-ink: #faf7f0;
+  --color-accent-soft: #eee6d8;
   --color-ok: #2f7d4f;
   --color-ok-soft: #e3f2e8;
   --color-warn: #a15c07;
@@ -22,15 +22,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #171412;
-    --color-surface: #221e1b;
-    --color-sunken: #1c1916;
-    --color-line: #3a332e;
-    --color-ink: #f2ece6;
-    --color-muted: #b3a89f;
-    --color-accent: #d9a184;
-    --color-accent-ink: #1b1411;
-    --color-accent-soft: #3a2a22;
+    --color-bg: #16110b;
+    --color-surface: #211a12;
+    --color-sunken: #1b150e;
+    --color-line: #3a3024;
+    --color-ink: #f5efe3;
+    --color-muted: #b8ac9a;
+    --color-accent: #f5efe3;
+    --color-accent-ink: #33210a;
+    --color-accent-soft: #3a2e20;
     --color-ok: #6fcf97;
     --color-ok-soft: #1e3326;
     --color-warn: #f2b45a;

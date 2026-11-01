@@ -6,7 +6,7 @@ import { api } from '../api';
 import { useAuth, useIsOwner } from '../App';
 import { BookingCard, BookingRow } from '../BookingCard';
 import { useSettings } from '../hooks';
-import { Banner, Button, Empty, Page, Spinner } from '../ui';
+import { Banner, Button, Empty, Logo, Page, Spinner } from '../ui';
 
 const addDays = (ymd: string, n: number) => wibDate(new Date(fromWib(ymd).getTime() + n * 86400_000));
 
@@ -36,6 +36,7 @@ export default function Home() {
   return (
     <>
       <header className="mx-auto max-w-[480px] px-4 pt-6 pb-2">
+        <Logo className="h-9 mb-4" />
         <p className="text-muted text-sm">{longDateId(new Date())}</p>
         <h1 className="text-2xl font-semibold">Halo, {user?.name}</h1>
       </header>

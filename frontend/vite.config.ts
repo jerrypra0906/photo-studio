@@ -14,16 +14,19 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['logo.png', 'logo-light.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'JES Studio Booking',
         short_name: 'JES Booking',
         lang: 'id',
-        theme_color: '#8a5a44',
-        background_color: '#faf7f4',
+        theme_color: '#faf7f0',
+        background_color: '#faf7f0',
         display: 'standalone',
         start_url: '/',
-        icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
       },
       workbox: { navigateFallbackDenylist: [/^\/api\//], runtimeCaching: [] },
     }),

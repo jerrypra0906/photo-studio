@@ -4,6 +4,16 @@ import { formatRp, formatThousands, parseAmount } from '@jes/shared';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
+/** JES Space logo; the cream variant is used in dark mode. */
+export function Logo({ className }: { className?: string }) {
+  return (
+    <picture>
+      <source srcSet="/logo-light.png" media="(prefers-color-scheme: dark)" />
+      <img src="/logo.png" alt="JES Space Studio" className={cx('w-auto select-none', className)} draggable={false} />
+    </picture>
+  );
+}
+
 // ---------- buttons ----------
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const VARIANT: Record<Variant, string> = {

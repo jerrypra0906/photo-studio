@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter: new (fonts: unknown) => { createPdfKitDocument(d: unknown): any } = require('pdfmake');
 import type { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
@@ -31,6 +33,12 @@ export function render(doc: TDocumentDefinitions): Promise<Buffer> {
 const CANCEL_LABEL: Record<string, string> = {
   CUSTOMER_CANCELLED: 'Dibatalkan oleh klien', NO_SHOW: 'Klien tidak datang', STUDIO_CANCELLED: 'Dibatalkan oleh studio', OTHER: 'Lainnya',
 };
+
+const BRAND = '#33210a';
+// resolved relative to dist/modules → backend/assets
+const LOGO = (() => {
+  try { return `data:image/png;base64,${readFileSync(join(__dirname, '..', '..', 'assets', 'logo.png')).toString('base64')}`; } catch { return null; }
+})();
 
 export const invoiceNo = (b: { bookingNo: string; invoiceRev: number }) => `INV-${b.bookingNo}${b.invoiceRev > 0 ? `-R${b.invoiceRev}` : ''}`;
 
@@ -111,16 +119,16 @@ export class DocumentsService {
     if (issued) await this.db.many(`INSERT INTO booking_history (booking_id, action, invoice_rev) VALUES ($1, 'INVOICE_ISSUED', $2)`, [id, b.invoiceRev]);
 
     const rows = this.lineItems(b);
-    const muted = '#6b6460';
+    const muted = '#6f6354';
     const body: Content[] = [
       {
         columns: [
-          [{ text: s.studioName, style: 'h1' }, { text: s.address, color: muted, fontSize: 8 }, s.studioPhone ? { text: `WhatsApp ${displayPhone(s.studioPhone)}`, color: muted, fontSize: 8 } : ''],
-          [{ text: 'INVOICE', style: 'h1', alignment: 'right', color: '#8a5a44' }, { text: invoiceNo(b), alignment: 'right', bold: true, fontSize: 9 },
+          [LOGO ? { image: LOGO, width: 96, margin: [0, 0, 0, 4] } : { text: s.studioName, style: 'h1' }, { text: s.address, color: muted, fontSize: 8 }, s.studioPhone ? { text: `WhatsApp ${displayPhone(s.studioPhone)}`, color: muted, fontSize: 8 } : ''],
+          [{ text: 'INVOICE', style: 'h1', alignment: 'right', color: BRAND }, { text: invoiceNo(b), alignment: 'right', bold: true, fontSize: 9 },
            { text: `Tanggal: ${longDateId(new Date())}`, alignment: 'right', color: muted, fontSize: 8 }],
         ],
       },
-      { canvas: [{ type: 'line', x1: 0, y1: 6, x2: 360, y2: 6, lineWidth: 0.5, lineColor: '#d9cfc7' }], margin: [0, 0, 0, 8] },
+      { canvas: [{ type: 'line', x1: 0, y1: 6, x2: 360, y2: 6, lineWidth: 0.5, lineColor: '#e6dfd2' }], margin: [0, 0, 0, 8] },
       {
         columns: [
           [{ text: 'Ditagihkan kepada', style: 'label' }, { text: b.clientNameSnap, bold: true }, b.clientPhoneSnap ? { text: displayPhone(b.clientPhoneSnap), fontSize: 8 } : ''],
@@ -139,7 +147,7 @@ export class DocumentsService {
             ...rows.map((r) => [r.label, r.qty, { text: formatRp(r.unit), alignment: 'right' as const }, { text: formatRp(r.amount), alignment: 'right' as const }]),
           ],
         },
-        layout: { hLineWidth: (i: number) => (i <= 1 ? 0.6 : 0.3), vLineWidth: () => 0, hLineColor: () => '#d9cfc7', paddingTop: () => 4, paddingBottom: () => 4 },
+        layout: { hLineWidth: (i: number) => (i <= 1 ? 0.6 : 0.3), vLineWidth: () => 0, hLineColor: () => '#e6dfd2', paddingTop: () => 4, paddingBottom: () => 4 },
         fontSize: 8,
       },
       {
@@ -148,7 +156,7 @@ export class DocumentsService {
           body: [
             ['Total', { text: formatRp(b.total), alignment: 'right', bold: true }],
             ['DP / sudah dibayar', { text: formatRp(b.paidAmount), alignment: 'right' }],
-            [{ text: 'Sisa pembayaran', bold: true }, { text: formatRp(b.total - b.paidAmount), alignment: 'right', bold: true, color: '#8a5a44' }],
+            [{ text: 'Sisa pembayaran', bold: true }, { text: formatRp(b.total - b.paidAmount), alignment: 'right', bold: true, color: BRAND }],
           ],
         },
         layout: 'noBorders', margin: [160, 8, 0, 10], fontSize: 9,
@@ -158,13 +166,13 @@ export class DocumentsService {
       s.dpRuleText || s.termsText ? { text: 'Ketentuan', style: 'label' } : '',
       s.dpRuleText ? { text: s.dpRuleText, fontSize: 7.5, color: muted } : '',
       s.termsText ? { text: s.termsText, fontSize: 7.5, color: muted } : '',
-      s.mapsUrl ? { text: s.mapsUrl, fontSize: 7.5, color: '#8a5a44', link: s.mapsUrl, margin: [0, 4, 0, 0] } : '',
+      s.mapsUrl ? { text: s.mapsUrl, fontSize: 7.5, color: BRAND, link: s.mapsUrl, margin: [0, 4, 0, 0] } : '',
     ];
     const pdf = await render({
       pageSize: 'A5', pageMargins: [28, 28, 28, 28],
       info: { title: invoiceNo(b), author: s.studioName },
       content: body,
-      defaultStyle: { font: 'Roboto', fontSize: 9, color: '#2b2522' },
+      defaultStyle: { font: 'Roboto', fontSize: 9, color: BRAND },
       styles: { h1: { fontSize: 14, bold: true }, label: { fontSize: 7, color: muted, bold: true, margin: [0, 0, 0, 2] }, th: { bold: true, color: muted } },
     });
     const safe = b.clientNameSnap.replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '');

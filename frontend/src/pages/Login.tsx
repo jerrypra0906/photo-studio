@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { ApiError, api, setAccessToken } from '../api';
 import { useAuth } from '../App';
-import { Banner, Button, Field, Input } from '../ui';
+import { Banner, Button, Field, Input, Logo } from '../ui';
 
 export default function Login() {
   const { user, setUser } = useAuth();
@@ -35,9 +35,8 @@ export default function Login() {
     <main className="min-h-dvh grid place-items-center px-4">
       <form onSubmit={submit} className="w-full max-w-[400px] space-y-5">
         <div className="text-center space-y-2">
-          <img src="/icon.svg" alt="" className="size-16 mx-auto rounded-2xl" />
-          <h1 className="text-2xl font-semibold">JES Space Studio</h1>
-          <p className="text-muted">Masuk untuk mengelola booking</p>
+          <h1><Logo className="h-16 mx-auto" /></h1>
+          <p className="text-muted pt-2">Masuk untuk mengelola booking</p>
         </div>
         {error ? <Banner tone="bad">{error}</Banner> : null}
         <Field label="Email" htmlFor="email">

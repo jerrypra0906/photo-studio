@@ -21,6 +21,7 @@ RUN npm ci --omit=dev --workspace shared --workspace backend && npm cache clean 
 COPY --from=build /app/shared/dist shared/dist
 COPY --from=build /app/backend/dist backend/dist
 COPY backend/db backend/db
+COPY backend/assets backend/assets
 RUN mkdir -p /data/files && chown -R node:node /data
 USER node
 WORKDIR /app/backend

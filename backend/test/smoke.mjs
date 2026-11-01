@@ -169,9 +169,15 @@ await step('US-02 Staff: no finance/admin; adjustment ignored; no past dates', a
   assert.equal(p.status, 400);
 });
 
-// Finance in an isolated past month
-const monthDay = `2025-0${1 + Math.floor(Math.random() * 9)}-15`;
-const month = monthDay.slice(0, 7);
+// Finance in an isolated past month: find one no earlier run has touched
+let month;
+for (let i = 0; i < 200 && !month; i++) {
+  const m = `${2000 + Math.floor(Math.random() * 25)}-${String(1 + Math.floor(Math.random() * 12)).padStart(2, '0')}`;
+  const r = (await api(owner, 'GET', `/reports/recap?month=${m}`)).data;
+  if (!r.closed && r.revenue.bookingCount === 0 && r.expenses.total === 0 && r.drafts.count === 0) month = m;
+}
+assert.ok(month, 'no unused past month found');
+const monthDay = `${month}-15`;
 let past;
 await step('BR-07 Owner back-enters a past booking (flagged back-dated)', async () => {
   const r = await api(owner, 'POST', '/bookings', { typeId: pkg.id, hours: 2, date: monthDay, startTime: '12:00', clientName: 'Claire', photographerId: hamja.id, addons: [{ addonId: addon('Extra person'), qty: 7 }], dpAmount: 300000 });
