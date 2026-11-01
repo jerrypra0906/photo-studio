@@ -1,0 +1,50 @@
+# Local stack: http://localhost:8080 (web + /api), API also on :3000, Postgres on :5433
+name: jes-booking
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: jes
+      POSTGRES_USER: jes
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      TZ: UTC
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jes -d jes"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: { context: ., dockerfile: infra/api.Dockerfile }
+    image: jes-api:local
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://jes:${POSTGRES_PASSWORD}@db:5432/jes
+      FILES_DIR: /data/files
+    ports: ["3000:3000"]
+    volumes: [files:/data/files]
+    depends_on: { db: { condition: service_healthy } }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/v1/ready || exit 1"]
+      interval: 5s
+      retries: 20
+
+  worker:
+    image: jes-api:local
+    command: ["node", "dist/worker.js"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://jes:${POSTGRES_PASSWORD}@db:5432/jes
+    depends_on: { api: { condition: service_healthy } }
+
+  web:
+    build: { context: ., dockerfile: infra/web.Dockerfile }
+    image: jes-web:local
+    ports: ["8080:80"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  files:

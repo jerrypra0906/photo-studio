@@ -1,0 +1,58 @@
+# JES Studio Booking
+
+Mobile-first booking, invoicing and P&L app for JES Space Studio. It implements the PRD (bookings, PDF invoices, WhatsApp templates, expenses, monthly recap and one-way Google Calendar sync).
+
+- Review of the PRD/TD and the build plan: [docs/REVIEW_AND_PLAN.md](docs/REVIEW_AND_PLAN.md)
+
+## Run locally (Docker)
+
+```bash
+cp .env.example .env   # then fill the secrets (a filled .env is already present on this machine)
+docker compose up -d --build
+```
+
+| URL | What |
+|---|---|
+| http://localhost:8080 | The app (nginx serves the PWA and proxies `/api`) |
+| http://localhost:3000/api/v1/health | API directly |
+| `localhost:5433` | PostgreSQL 18 (`jes` / password in `.env`) |
+
+Seeded logins come from `.env` (`SEED_OWNER_*`, `SEED_STAFF_*`). The seed data has the current price list (Studio Only 170K/h, Photo Package 599K/h), photographers, add-ons, expense categories and WhatsApp templates. Fill in the bank details in **Admin → Pengaturan studio** before generating invoices.
+
+## Layout
+
+```
+shared/     pricing(), money/phone/WIB helpers, Zod schemas, template renderer (used by both sides)
+backend/    NestJS 11 API (src/main.ts) + worker (src/worker.ts), SQL migrations in db/migrations
+frontend/   React 19 + Vite + Tailwind 4 PWA
+infra/      Dockerfiles and nginx config
+```
+
+## Tests
+
+```bash
+npm test                                           # pricing unit tests (PRD §6.3 worked examples)
+node backend/test/smoke.mjs http://localhost:8080  # 23 API acceptance checks against the running stack
+```
+
+The smoke test creates bookings on random far-future dates and in a random 2025 month, so run it only against a dev database.
+
+## Google Calendar
+
+The code is complete but has not been tested against a real Google account yet. To enable it:
+
+1. In Google Cloud Console, enable the **Google Calendar API** and create an OAuth client of type **Web application**.
+2. Add the redirect URI `http://localhost:8080/api/v1/integrations/google/callback`. For production use `https://<domain>/api/v1/integrations/google/callback`.
+3. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, then run `docker compose up -d api worker`.
+4. In the app, go to **Admin → Google Calendar → Hubungkan**, sign in as jes.space.studio, and pick the "Jessie" calendar. For testing, use a separate calendar first (TD §3.1).
+
+Until it is connected, bookings save normally and show no sync badge (US-29.10).
+
+## Useful commands
+
+```bash
+docker compose logs -f api worker
+docker compose exec db psql -U jes -d jes
+docker compose down          # stop (data kept in volumes)
+docker compose down -v       # stop and wipe the database
+```
