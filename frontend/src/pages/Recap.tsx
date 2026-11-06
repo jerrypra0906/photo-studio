@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatRp, monthLabelId, shortDateId, wibMonth } from '@jes/shared';
 import { ApiError, api } from '../api';
 import { Banner, Button, Card, Chip, Field, Input, Money, Page, PageHeader, Sheet, Spinner, cx, useToast } from '../ui';
-import { ExpenseRow, MonthSwitcher, useMonthParam } from './Finance';
+import { ExpenseRow, FinanceTabs, MonthSwitcher, useMonthParam } from './Finance';
 
 /** S18 Monthly recap (L2-4.3, PRD §6.5). */
 export default function Recap() {
@@ -48,7 +48,8 @@ export default function Recap() {
 
   return (
     <>
-      <PageHeader title="Rekap bulanan" back="/finance" />
+      <PageHeader title="Keuangan" />
+      <FinanceTabs />
       <Page>
         <MonthSwitcher month={month} onChange={setMonth} />
         <div className="flex gap-2">
@@ -58,7 +59,7 @@ export default function Recap() {
         {recap.isLoading || !r ? <Spinner /> : (
           <>
             {r.closed ? <Banner tone="info" action={<button className="underline font-medium" onClick={() => setReopenOpen(true)}>Buka kembali</button>}>Bulan ini sudah ditutup — data terkunci.</Banner> : null}
-            {r.drafts.count ? <Banner tone="warn" action={<Link to="/finance" className="underline font-medium">Tinjau</Link>}>{r.drafts.count} biaya draft ({formatRp(r.drafts.amount)}) belum termasuk</Banner> : null}
+            {r.drafts.count ? <Banner tone="warn" action={<Link to="/finance/expenses" className="underline font-medium">Tinjau</Link>}>{r.drafts.count} biaya draft ({formatRp(r.drafts.amount)}) belum termasuk</Banner> : null}
             {empty ? <Banner tone="info">Tidak ada transaksi bulan ini.</Banner> : null}
 
             {/* Net profit first (PRD §8.6) */}

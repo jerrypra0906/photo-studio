@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, NavLink, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatRp, monthLabelId, shiftMonth, shortDateId, wibMonth } from '@jes/shared';
 import { ApiError, api } from '../api';
@@ -21,7 +21,24 @@ export function useMonthParam() {
   return [month, (m: string) => setSp({ month: m }, { replace: true })] as const;
 }
 
-/** S15 Finance home: KPIs, draft to-do, recent expenses (PRD §8.6). */
+/** Finance section tabs: Dashboard · Pengeluaran · Rekap (Owner only). */
+export function FinanceTabs() {
+  const tabs: [string, string][] = [['/finance', 'Dashboard'], ['/finance/expenses', 'Pengeluaran'], ['/finance/recap', 'Rekap']];
+  return (
+    <nav className="sticky top-14 z-10 bg-bg/95 backdrop-blur border-b border-line" aria-label="Keuangan">
+      <div className="mx-auto max-w-[480px] px-4 flex gap-1">
+        {tabs.map(([to, label]) => (
+          <NavLink key={to} to={to} end
+            className={({ isActive }) => cx('flex-1 text-center text-sm font-medium min-h-11 grid place-items-center border-b-2', isActive ? 'border-accent text-ink' : 'border-transparent text-muted')}>
+            {label}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+/** S15 Expenses: month KPIs, draft to-do, expenses of the month (PRD §8.6). */
 export default function Finance() {
   const [month, setMonth] = useMonthParam();
   const recap = useQuery({ queryKey: ['recap', month, ''], queryFn: () => api.get(`/reports/recap?month=${month}`) });
@@ -32,7 +49,8 @@ export default function Finance() {
 
   return (
     <>
-      <PageHeader title="Keuangan" action={<Link to="/finance/recap" className="text-accent text-sm font-medium px-2 min-h-11 grid place-items-center">Rekap</Link>} />
+      <PageHeader title="Keuangan" />
+      <FinanceTabs />
       <Page className="pb-28">
         <MonthSwitcher month={month} onChange={setMonth} />
         {recap.isLoading ? <Spinner /> : r ? (

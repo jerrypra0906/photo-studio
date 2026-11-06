@@ -11,6 +11,7 @@ import Bookings from './pages/Bookings';
 import BookingForm from './pages/BookingForm';
 import BookingDetail from './pages/BookingDetail';
 import Finance from './pages/Finance';
+import Dashboard from './pages/Dashboard';
 import ExpenseForm from './pages/ExpenseForm';
 import Recap from './pages/Recap';
 import { AdminHome, AdminTypes, AdminPhotographers, AdminAddons, AdminCategories, AdminUsers } from './pages/AdminMasters';
@@ -145,7 +146,8 @@ export default function App() {
                 <Route path="bookings/:id/edit" element={<BookingForm />} />
                 <Route path="me" element={<Me />} />
                 <Route element={<OwnerOnly />}>
-                  <Route path="finance" element={<Finance />} />
+                  <Route path="finance" element={<Dashboard />} />
+                  <Route path="finance/expenses" element={<Finance />} />
                   <Route path="finance/recap" element={<Recap />} />
                   <Route path="finance/expenses/new" element={<ExpenseForm />} />
                   <Route path="finance/expenses/:id" element={<ExpenseForm />} />

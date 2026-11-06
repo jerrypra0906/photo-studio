@@ -7,14 +7,14 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { RevenueBasis, confirmExpenseInput, expenseInput, reopenInput, shiftMonth, wibDate, wibMonth } from '@jes/shared';
+import { RevenueBasis, confirmExpenseInput, expenseInput, fromWib, reopenInput, shiftMonth, wibDate, wibMonth } from '@jes/shared';
 import { AppError, AuthUser, Body$, CurrentUser, OwnerOnly, badRequest, conflict, notFound } from '../common/http';
 import { config } from '../config';
 import { Db, Queryable } from '../db';
 import { DocumentsService } from './documents.service';
 
 const Id = new ParseUUIDPipe();
-const monthRe = /^\d{4}-\d{2}$/;
+const monthRe = /^\d{4}-(0[1-9]|1[0-2])$/;
 const checkMonth = (m?: string) => {
   if (!m || !monthRe.test(m)) throw badRequest('Bulan tidak valid (YYYY-MM)');
   return m;
@@ -87,6 +87,111 @@ export class RecapService {
       closed: !!close?.closed,
       closeInfo: close,
       bookings,
+    };
+  }
+
+  /**
+   * Monthly totals for an inclusive range of WIB months, with the same rules as recap():
+   * revenue by session month (BR-10, Cancelled excluded), confirmed expenses by month paid (BR-12).
+   */
+  private async monthly(from: string, to: string, basis: RevenueBasis, q: Queryable) {
+    const range = [fromWib(`${from}-01`), fromWib(`${shiftMonth(to, 1)}-01`)];
+    const rev = await this.db.many(
+      `SELECT wib_month(b.start_at) AS month, count(*)::int AS bookings,
+              sum(b.total)::bigint AS billed, sum(b.paid_amount)::bigint AS collected,
+              sum(b.rate_snap * b.hours)::bigint AS base, sum(b.adjustment)::bigint AS adjustments,
+              coalesce(sum(a.addons), 0)::bigint AS addons, sum(b.total - b.paid_amount)::bigint AS receivable,
+              count(*) FILTER (WHERE b.start_at > now())::int AS upcoming
+         FROM bookings b
+         LEFT JOIN (SELECT booking_id, sum(line_total) AS addons FROM booking_addons GROUP BY booking_id) a ON a.booking_id = b.id
+        WHERE b.status IN ('CONFIRMED','COMPLETED') AND b.start_at >= $1 AND b.start_at < $2
+        GROUP BY 1`, range, q);
+    const types = await this.db.many(
+      `SELECT wib_month(start_at) AS month, type_name_snap AS name, sum(rate_snap * hours)::bigint AS amount
+         FROM bookings WHERE status IN ('CONFIRMED','COMPLETED') AND start_at >= $1 AND start_at < $2
+        GROUP BY 1, 2`, range, q);
+    const exp = await this.db.many(
+      `SELECT to_char(paid_on, 'YYYY-MM') AS month,
+              coalesce(sum(amount) FILTER (WHERE status = 'CONFIRMED'), 0)::bigint AS expenses,
+              count(*) FILTER (WHERE status = 'DRAFT')::int AS drafts
+         FROM expenses WHERE deleted_at IS NULL AND paid_on >= $1::date AND paid_on < $2::date
+        GROUP BY 1`, [`${from}-01`, `${shiftMonth(to, 1)}-01`], q);
+    const cats = await this.db.many(
+      `SELECT c.name, sum(e.amount)::bigint AS amount
+         FROM expenses e JOIN expense_categories c ON c.id = e.category_id
+        WHERE e.deleted_at IS NULL AND e.status = 'CONFIRMED' AND e.paid_on >= $1::date AND e.paid_on < $2::date
+        GROUP BY c.name ORDER BY amount DESC`, [`${from}-01`, `${shiftMonth(to, 1)}-01`], q);
+    const closed = new Set((await this.db.many(`SELECT month FROM month_closes WHERE closed AND month BETWEEN $1 AND $2`, [from, to], q)).map((r) => r.month));
+
+    const current = wibMonth(new Date());
+    const out = [];
+    for (let m = from; m <= to; m = shiftMonth(m, 1)) {
+      const r = rev.find((x) => x.month === m);
+      const e = exp.find((x) => x.month === m);
+      const revenue = r ? (basis === 'BILLED' ? r.billed : r.collected) : 0;
+      const expenses = e?.expenses ?? 0;
+      out.push({
+        month: m,
+        bookings: r?.bookings ?? 0,
+        upcoming: r?.upcoming ?? 0,
+        billed: r?.billed ?? 0,
+        collected: r?.collected ?? 0,
+        revenue,
+        expenses,
+        net: revenue - expenses,
+        marginPct: revenue > 0 ? Math.round(((revenue - expenses) / revenue) * 1000) / 10 : null,
+        receivable: r?.receivable ?? 0,
+        addons: r?.addons ?? 0,
+        adjustments: r?.adjustments ?? 0,
+        byType: types.filter((t) => t.month === m).map((t) => ({ name: t.name, amount: t.amount })),
+        drafts: e?.drafts ?? 0,
+        closed: closed.has(m),
+        // the running month still gains costs and contains future sessions
+        partial: m >= current,
+      });
+    }
+    return { months: out, expenseCategories: cats };
+  }
+
+  /** Owner dashboard: the last `count` months ending at `end`, window totals and year-to-date (FR-28). */
+  async trend(end: string, count: number, basisOverride?: RevenueBasis, q: Queryable = this.db.pool) {
+    const basis: RevenueBasis = basisOverride ?? (await this.db.one(`SELECT revenue_basis FROM settings WHERE id = 1`, [], q)).revenueBasis;
+    const start = shiftMonth(end, -(count - 1));
+    const { months, expenseCategories } = await this.monthly(start, end, basis, q);
+    const sum = (rows: typeof months, k: 'revenue' | 'expenses' | 'net' | 'bookings' | 'addons' | 'adjustments') => rows.reduce((a, r) => a + r[k], 0);
+    const summarise = (rows: typeof months) => {
+      const revenue = sum(rows, 'revenue');
+      const net = sum(rows, 'net');
+      return { revenue, expenses: sum(rows, 'expenses'), net, bookings: sum(rows, 'bookings'), marginPct: revenue > 0 ? Math.round((net / revenue) * 1000) / 10 : null };
+    };
+    // best / worst / average use finished months only; the running month would distort them
+    const active = months.filter((m) => !m.partial && (m.bookings || m.expenses));
+    const byNet = [...active].sort((a, b) => b.net - a.net);
+
+    const typeTotals = new Map<string, number>();
+    for (const m of months) for (const t of m.byType) typeTotals.set(t.name, (typeTotals.get(t.name) ?? 0) + t.amount);
+
+    const yearStart = `${end.slice(0, 4)}-01`;
+    const ytdRows = yearStart >= start ? months.filter((m) => m.month >= yearStart) : (await this.monthly(yearStart, end, basis, q)).months;
+    const prevYear = (await this.monthly(shiftMonth(yearStart, -12), shiftMonth(end, -12), basis, q)).months;
+
+    return {
+      basis, start, end, months,
+      window: {
+        ...summarise(months),
+        avgNet: active.length ? Math.round(sum(active, 'net') / active.length) : 0,
+        activeMonths: active.length,
+        best: byNet[0] ? { month: byNet[0].month, net: byNet[0].net } : null,
+        worst: byNet.length > 1 ? { month: byNet.at(-1)!.month, net: byNet.at(-1)!.net } : null,
+        lossMonths: active.filter((m) => m.net < 0).length,
+        revenueMix: [
+          ...[...typeTotals].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount),
+          { name: 'Add-on', amount: sum(months, 'addons') },
+          ...(sum(months, 'adjustments') ? [{ name: 'Penyesuaian harga', amount: sum(months, 'adjustments') }] : []),
+        ],
+        expenseCategories,
+      },
+      ytd: { year: end.slice(0, 4), ...summarise(ytdRows), previousYear: summarise(prevYear) },
     };
   }
 }
@@ -204,6 +309,16 @@ export class FinanceController {
     const cat = await this.db.one(`SELECT active FROM expense_categories WHERE id = $1`, [b.categoryId]);
     if (!cat) throw badRequest('Kategori tidak ditemukan', { categoryId: 'Pilih kategori' });
     if (b.bookingId && !(await this.db.one(`SELECT 1 FROM bookings WHERE id = $1`, [b.bookingId]))) throw badRequest('Booking tidak ditemukan', { bookingId: 'Booking tidak ditemukan' });
+  }
+
+  // ---------- dashboard trend (FR-28) ----------
+
+  @Get('reports/trend')
+  trend(@Query('end') end?: string, @Query('months') months?: string, @Query('basis') basis?: string) {
+    const e = end ? checkMonth(end) : wibMonth(new Date());
+    const n = months === undefined ? 12 : Number(months);
+    if (!Number.isInteger(n) || n < 1 || n > 36) throw badRequest('Jumlah bulan 1–36');
+    return this.recaps.trend(e, n, basis === 'BILLED' || basis === 'COLLECTED' ? basis : undefined);
   }
 
   // ---------- recap (L2-4.3) ----------

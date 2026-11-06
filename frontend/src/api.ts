@@ -14,14 +14,23 @@ export const setOnAuthLost = (fn: () => void) => { onAuthLost = fn; };
 
 let refreshInFlight: Promise<any | null> | null = null;
 
-/** One refresh at a time: the token rotates, so parallel calls would present an already-rotated token. */
+/**
+ * One refresh at a time: the token rotates, so parallel calls would present an already-rotated token.
+ * Only a 401 means the session is over; a network error or 5xx (e.g. the API restarting) is retried
+ * so a deploy doesn't sign the owner out.
+ */
 export function refreshSession(): Promise<any | null> {
   refreshInFlight ??= (async () => {
-    const r = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'same-origin' });
-    if (!r.ok) return null;
-    const data = await r.json();
-    accessToken = data.accessToken;
-    return data.user;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt) await new Promise((res) => setTimeout(res, 800 * attempt));
+      const r = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'same-origin' }).catch(() => null);
+      if (!r || r.status >= 500 || r.status === 429) continue;
+      if (!r.ok) return null;
+      const data = await r.json();
+      accessToken = data.accessToken;
+      return data.user;
+    }
+    return null;
   })().catch(() => null).finally(() => { refreshInFlight = null; });
   return refreshInFlight;
 }

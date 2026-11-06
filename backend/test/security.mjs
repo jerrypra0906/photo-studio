@@ -127,7 +127,7 @@ await R.test('SEC-A15', '−', 'Weak passwords are rejected for new users (min l
 R.area('B. Authorization (vertical / horizontal)');
 const OWNER_ONLY = [
   ['GET', '/expenses'], ['GET', '/expense-categories'], ['GET', '/users'], ['GET', '/reports/recap?month=2026-10'], ['GET', '/reports/recap.csv?month=2026-10'],
-  ['GET', '/reports/recap.pdf?month=2026-10'], ['GET', '/integrations/google'], ['GET', '/integrations/google/auth-url'], ['POST', '/integrations/google/resync'],
+  ['GET', '/reports/recap.pdf?month=2026-10'], ['GET', '/reports/trend'], ['GET', '/integrations/google'], ['GET', '/integrations/google/auth-url'], ['POST', '/integrations/google/resync'],
   ['POST', '/integrations/google/disconnect'], ['PUT', '/integrations/google/calendar', { calendarId: 'x' }], ['POST', '/booking-types', {}], ['DELETE', `/booking-types/${SO.id}`],
   ['POST', '/photographers', {}], ['POST', '/addons', {}], ['POST', '/expense-categories', {}], ['PUT', '/settings', {}], ['PUT', '/templates/NEW', { body: 'x' }],
   ['POST', '/users', {}], ['PATCH', `/users/${me.id}`, {}], ['POST', '/reports/months/2020-01/close'], ['POST', '/reports/months/2020-01/reopen', { reason: 'xxx' }],

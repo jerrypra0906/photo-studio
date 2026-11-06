@@ -12,6 +12,23 @@ export function formatRp(n: number): string {
   return `${n < 0 ? '−' : ''}Rp${abs}`;
 }
 
+/** Short axis/tile form: 14745000 → "Rp14,7 jt", −3498000 → "−Rp3,5 jt", 250000 → "Rp250 rb" */
+export function formatRpCompact(n: number): string {
+  const a = Math.abs(n);
+  const sign = n < 0 ? '−' : '';
+  const dec = (v: number) => (Math.round(v * 10) / 10).toString().replace('.', ',');
+  if (a >= 1e9) return `${sign}Rp${dec(a / 1e9)} M`;
+  if (a >= 1e6) return `${sign}Rp${dec(a / 1e6)} jt`;
+  if (a >= 1e3) return `${sign}Rp${dec(a / 1e3)} rb`;
+  return `${sign}Rp${a}`;
+}
+
+/** "2026-03" → "Mar" (or "Mar 26" with the year) */
+export function shortMonthId(month: string, withYear = false): string {
+  const [y, m] = month.split('-').map(Number);
+  return `${MONTHS[m - 1].slice(0, 3)}${withYear ? ` ${String(y).slice(2)}` : ''}`;
+}
+
 /** 1449000 → "1.449.000" */
 export function formatThousands(n: number): string {
   return Math.trunc(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');

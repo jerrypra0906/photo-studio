@@ -818,6 +818,47 @@ try {
   });
 
   // =====================================================================
+  R.area('Owner dashboard — monthly performance & trend (FR-23, FR-28)');
+  await R.test('DASH-01', '+', 'Every month in the trend equals that month\'s recap (revenue, expenses, net, bookings)', async () => {
+    const t = (await api(owner, 'GET', `/reports/trend?end=${M}&months=3`)).data;
+    assert.deepEqual(t.months.map((m) => m.month), [addDays(`${M}-01`, -40).slice(0, 7), addDays(`${M}-01`, -10).slice(0, 7), M]);
+    for (const m of t.months) {
+      const r = (await api(owner, 'GET', `/reports/recap?month=${m.month}`)).data;
+      assert.equal(m.revenue, r.revenue.total, `${m.month} revenue`); assert.equal(m.expenses, r.expenses.total, `${m.month} expenses`);
+      assert.equal(m.net, r.netProfit, `${m.month} net`); assert.equal(m.bookings, r.revenue.bookingCount, `${m.month} bookings`);
+    }
+    const last = t.months.at(-1);
+    return `${M}: revenue ${last.revenue}, expenses ${last.expenses}, net ${last.net}`;
+  });
+  await R.test('DASH-02', '+', 'Window totals are the sum of the months; margin, best/worst and loss months are consistent', async () => {
+    const t = (await api(owner, 'GET', `/reports/trend?end=${M2}&months=12`)).data;
+    const sum = (k) => t.months.reduce((a, m) => a + m[k], 0);
+    assert.equal(t.window.revenue, sum('revenue')); assert.equal(t.window.expenses, sum('expenses')); assert.equal(t.window.net, sum('net'));
+    const active = t.months.filter((m) => !m.partial && (m.bookings || m.expenses));
+    assert.equal(t.window.lossMonths, active.filter((m) => m.net < 0).length);
+    if (active.length) assert.equal(t.window.best.net, Math.max(...active.map((m) => m.net)));
+    assert.ok(t.window.lossMonths >= 1, 'loss month M2 counted');
+  });
+  await R.test('DASH-03', '+', 'Collected basis uses amounts received; mix and YTD are returned', async () => {
+    const b = (await api(owner, 'GET', `/reports/trend?end=${M}&months=1&basis=BILLED`)).data.months[0];
+    const c = (await api(owner, 'GET', `/reports/trend?end=${M}&months=1&basis=COLLECTED`)).data;
+    assert.equal(c.basis, 'COLLECTED'); assert.equal(c.months[0].revenue, b.collected); assert.ok(b.billed >= b.collected);
+    assert.ok(Array.isArray(c.window.revenueMix) && c.ytd.year === M.slice(0, 4));
+  });
+  await R.test('DASH-04', '+', 'The running month is flagged partial and left out of best/worst/average', async () => {
+    const t = (await api(owner, 'GET', '/reports/trend?months=2')).data;
+    assert.equal(t.months.at(-1).month, today.slice(0, 7)); assert.equal(t.months.at(-1).partial, true); assert.equal(t.months[0].partial, false);
+    if (t.window.best) assert.notEqual(t.window.best.month, today.slice(0, 7));
+  });
+  await R.test('DASH-05', '−', 'Months outside 1–36 or a malformed end month → 400', async () => {
+    for (const q of ['months=0', 'months=37', 'months=abc', 'end=2026-13', 'end=x']) assert.equal((await api(owner, 'GET', `/reports/trend?${q}`)).status, 400, q);
+  });
+  await R.test('DASH-06', '−', 'Staff cannot read the dashboard (403, no data)', async () => {
+    const r = await api(staff, 'GET', '/reports/trend');
+    assert.equal(r.status, 403); assert.deepEqual(Object.keys(r.data).sort(), ['code', 'message']);
+  });
+
+  // =====================================================================
   R.area('Google Calendar — US-28, US-29');
   await R.test('US-29.10', '−', 'Calendar not connected: booking saves with no sync status', async () => {
     const b = (await book(owner, { date: addDays(D, 30), startTime: '10:00' })).data;
