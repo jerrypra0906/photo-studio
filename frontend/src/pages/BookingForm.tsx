@@ -145,7 +145,7 @@ export default function BookingForm() {
 
   const activeTypes = (types.data ?? []).filter((t) => t.active || t.id === ex?.typeId);
   if (!activeTypes.length) {
-    return (<><PageHeader title="Booking baru" back /><Page><Empty action={owner ? <Link to="/admin/types" className="text-accent underline">Atur jenis booking</Link> : null}>Belum ada jenis booking — minta Owner untuk mengatur.</Empty></Page></>);
+    return (<><PageHeader title="Booking baru" back /><Page><Empty action={owner ? <Link to="/admin/types" className="text-accent-text underline">Atur jenis booking</Link> : null}>Belum ada jenis booking — minta Owner untuk mengatur.</Empty></Page></>);
   }
   const activePhotographers = (photographers.data ?? []).filter((p) => p.active || p.id === ex?.photographerId);
   const phoneInvalid = f.clientPhone.trim() !== '' && !normalizePhone(f.clientPhone);
@@ -214,7 +214,7 @@ export default function BookingForm() {
                   photographerId: t.requiresPhotographer ? p.photographerId : null,
                   addons: Object.fromEntries(Object.entries(p.addons).filter(([aid]) => addons.data?.find((a) => a.id === aid)?.typeIds.includes(t.id))),
                 }))}
-                className={cx('rounded-2xl border-2 p-4 text-left min-h-20 transition-colors', f.typeId === t.id ? 'border-accent bg-accent-soft' : 'border-line bg-surface')}>
+                className={cx('rounded-2xl border-2 p-4 text-left min-h-20 transition-colors', f.typeId === t.id ? 'border-accent-text bg-accent-soft shadow-[0_0_0_4px_var(--color-accent-soft)]' : 'border-line glass')}>
                 <div className="font-semibold">{t.name}</div>
                 <div className="text-sm text-muted tabular">{formatRp(t.hourlyRate)}/jam</div>
               </button>
@@ -225,7 +225,7 @@ export default function BookingForm() {
         {/* 2. When */}
         <section className="space-y-3">
           <h2 className="font-semibold">Waktu</h2>
-          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
             <Field label="Tanggal" htmlFor="date" error={errors.date}>
               <input id="date" type="date" className={inputCls} value={f.date} min={owner ? undefined : today}
                 onChange={(e) => { set('date', e.target.value); set('startTime', ''); }} />
@@ -248,7 +248,7 @@ export default function BookingForm() {
             )}
             {owner ? (
               <details className="mt-2 text-sm">
-                <summary className="text-accent cursor-pointer min-h-11 flex items-center">Jam lain (di luar jam buka)</summary>
+                <summary className="text-accent-text cursor-pointer min-h-11 flex items-center">Jam lain (di luar jam buka)</summary>
                 <input type="time" step={step * 60} className={cx(inputCls, 'mt-2')} value={f.startTime} onChange={(e) => set('startTime', e.target.value)} aria-label="Jam mulai manual" />
               </details>
             ) : null}
@@ -279,7 +279,7 @@ export default function BookingForm() {
                 <ul className="absolute z-20 mt-1 w-full rounded-xl border border-line bg-surface shadow-lg overflow-hidden">
                   {suggestions.data.map((c: any) => (
                     <li key={c.id}>
-                      <button type="button" className="w-full text-left px-3 py-2 min-h-11 active:bg-sunken"
+                      <button type="button" className="w-full text-left px-3 py-2 min-h-11 active:bg-accent-soft"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => { setF((p) => p && ({ ...p, clientName: c.name, clientPhone: c.phoneE164 ? displayPhone(c.phoneE164) : '' })); setSuggestOpen(false); }}>
                         {c.name}{c.phoneE164 ? <span className="text-muted"> — {displayPhone(c.phoneE164)}</span> : null}
@@ -300,7 +300,7 @@ export default function BookingForm() {
           <section className="space-y-2">
             <h2 className="font-semibold">Fotografer</h2>
             {activePhotographers.length === 0 ? (
-              <Empty action={owner ? <Link to="/admin/photographers" className="text-accent underline">Tambah fotografer</Link> : null}>Belum ada fotografer.</Empty>
+              <Empty action={owner ? <Link to="/admin/photographers" className="text-accent-text underline">Tambah fotografer</Link> : null}>Belum ada fotografer.</Empty>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {activePhotographers.map((p) => {
@@ -324,7 +324,7 @@ export default function BookingForm() {
               const price = snap?.priceSnap ?? a.price;
               const unit = snap?.unitSnap ?? a.unit;
               return (
-                <div key={a.id} className={cx('rounded-2xl border p-3 flex items-center gap-3', on ? 'border-accent bg-accent-soft' : 'border-line bg-surface')}>
+                <div key={a.id} className={cx('rounded-2xl border p-3 flex items-center gap-3', on ? 'border-accent-text bg-accent-soft shadow-[0_0_0_4px_var(--color-accent-soft)]' : 'border-line glass')}>
                   <button type="button" className="flex-1 text-left min-h-11" onClick={() => toggleAddon(a.id)} aria-pressed={on}>
                     <div className="font-medium">{a.name}</div>
                     <div className="text-sm text-muted tabular">{formatRp(price)} {UNIT_LABEL[unit]}</div>

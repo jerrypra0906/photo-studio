@@ -72,14 +72,14 @@ export default function BookingDetail() {
   return (
     <>
       <PageHeader title={b.bookingNo} back
-        action={<button className="size-11 grid place-items-center rounded-full active:bg-sunken text-xl" aria-label="Menu lainnya" onClick={() => setSheet('menu')}>⋯</button>} />
+        action={<button className="size-11 grid place-items-center rounded-full active:bg-accent-soft text-xl" aria-label="Menu lainnya" onClick={() => setSheet('menu')}>⋯</button>} />
       <Page className="pb-40">
         {/* Header card */}
         <Card className="space-y-3">
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-semibold truncate">{b.clientNameSnap}</h2>
-              {b.clientPhoneSnap ? <a href={`tel:+${b.clientPhoneSnap}`} className="text-sm text-accent">{displayPhone(b.clientPhoneSnap)}</a> : <p className="text-sm text-muted">Tanpa nomor</p>}
+              {b.clientPhoneSnap ? <a href={`tel:+${b.clientPhoneSnap}`} className="text-sm text-accent-text">{displayPhone(b.clientPhoneSnap)}</a> : <p className="text-sm text-muted">Tanpa nomor</p>}
             </div>
             <div className="flex flex-col items-end gap-1">
               <StatusBadge status={b.status} />
@@ -147,7 +147,7 @@ export default function BookingDetail() {
         ) : null}
 
         {/* History */}
-        <details className="rounded-2xl bg-surface border border-line p-4">
+        <details className="rounded-3xl glass border border-line p-4">
           <summary className="font-semibold cursor-pointer">Riwayat ({b.history.length}) · Invoice R{b.invoiceRev}</summary>
           <ol className="mt-3 space-y-2 text-sm">
             {b.history.map((h: any) => (
@@ -193,7 +193,7 @@ export default function BookingDetail() {
 
 function Line({ label, value, strong, accent }: { label: string; value: number; strong?: boolean; accent?: boolean }) {
   return (
-    <div className={cx('flex justify-between gap-3 text-sm', strong && 'font-semibold text-base', accent && 'text-accent')}>
+    <div className={cx('flex justify-between gap-3 text-sm', strong && 'font-semibold text-base', accent && 'text-accent-text')}>
       <span className={cx(!strong && 'text-muted')}>{label}</span>
       <Money value={value} />
     </div>
@@ -221,7 +221,7 @@ function InvoiceSheet({ b, onClose }: { b: any; onClose: () => void }) {
     <Sheet open onClose={onClose} title={invNo}
       footer={url ? (
         <div className="grid grid-cols-2 gap-3">
-          <a href={url} download={filename} className="min-h-11 rounded-xl border border-line bg-surface grid place-items-center font-medium">Unduh</a>
+          <a href={url} download={filename} className="min-h-11 rounded-2xl border border-line glass grid place-items-center font-medium">Unduh</a>
           <Button disabled={!canShare} onClick={() => navigator.share({ files: [file!], title: invNo }).catch(() => undefined)}>Bagikan</Button>
         </div>
       ) : undefined}>
@@ -232,7 +232,7 @@ function InvoiceSheet({ b, onClose }: { b: any; onClose: () => void }) {
         <>
           <Card className="space-y-1 text-sm">
             <div className="flex items-center gap-3">
-              <span className="size-12 rounded-xl bg-accent-soft text-accent grid place-items-center font-semibold text-xs">PDF</span>
+              <span className="size-12 rounded-xl bg-accent-soft text-accent-text grid place-items-center font-semibold text-xs">PDF</span>
               <div className="min-w-0">
                 <div className="font-semibold truncate">{filename}</div>
                 <div className="text-muted">A5 · {file ? Math.max(1, Math.round(file.size / 1024)) : 0} KB</div>
@@ -242,7 +242,7 @@ function InvoiceSheet({ b, onClose }: { b: any; onClose: () => void }) {
             <div className="flex justify-between"><span className="text-muted">DP / dibayar</span><Money value={b.paidAmount} /></div>
             <div className="flex justify-between font-semibold"><span>Sisa</span><Money value={b.balance} /></div>
           </Card>
-          <a href={url} target="_blank" rel="noreferrer" className="block text-center text-accent font-medium min-h-11 leading-[44px]">Buka PDF</a>
+          <a href={url} target="_blank" rel="noreferrer" className="block text-center text-accent-text font-medium min-h-11 leading-[44px]">Buka PDF</a>
           {!canShare ? <p className="text-xs text-muted">Berbagi file tidak didukung di perangkat ini — unduh lalu lampirkan di WhatsApp.</p> : null}
         </>
       )}
@@ -302,7 +302,7 @@ function WhatsAppSheet({ b, initialKind, onClose, onSent }: { b: any; initialKin
       {!b.clientPhoneSnap ? <p className="text-sm text-muted">Tambahkan nomor telepon untuk membuka WhatsApp langsung. Salin tetap bisa.</p> : null}
       {copyHint ? <Banner tone="info">Tekan lama pada teks lalu pilih Salin.</Banner> : null}
       {b.invoiceSentAt ? (
-        <p className="text-sm text-muted">Ditandai terkirim {wibTime(b.invoiceSentAt)} · <button className="text-accent underline" onClick={undo}>Belum terkirim</button></p>
+        <p className="text-sm text-muted">Ditandai terkirim {wibTime(b.invoiceSentAt)} · <button className="text-accent-text underline" onClick={undo}>Belum terkirim</button></p>
       ) : null}
     </Sheet>
   );
@@ -331,7 +331,7 @@ function CancelSheet({ b, onClose, onDone }: { b: any; onClose: () => void; onDo
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-muted mb-1">Alasan</legend>
         {CANCEL_REASONS.map(([k, l]) => (
-          <label key={k} className={cx('flex items-center gap-3 rounded-xl border px-3 min-h-11', reason === k ? 'border-accent bg-accent-soft' : 'border-line bg-surface')}>
+          <label key={k} className={cx('flex items-center gap-3 rounded-xl border px-3 min-h-11', reason === k ? 'border-accent-text bg-accent-soft shadow-[0_0_0_4px_var(--color-accent-soft)]' : 'border-line glass')}>
             <input type="radio" name="reason" value={k} checked={reason === k} onChange={() => { setReason(k); setError(''); }} className="accent-[var(--color-accent)]" />
             {l}
           </label>

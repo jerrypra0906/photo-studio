@@ -24,9 +24,9 @@ export function AdminHome() {
     <>
       <PageHeader title="Admin" />
       <Page>
-        <div className="rounded-2xl border border-line bg-surface divide-y divide-line overflow-hidden">
+        <div className="rounded-3xl border border-line glass divide-y divide-line overflow-hidden">
           {items.map(([to, t, d]) => (
-            <Link key={to} to={to} className="flex items-center gap-3 px-4 min-h-16 active:bg-sunken">
+            <Link key={to} to={to} className="flex items-center gap-3 px-4 min-h-16 active:bg-accent-soft">
               <div className="flex-1"><div className="font-medium">{t}</div><div className="text-sm text-muted">{d}</div></div>
               <span className="text-muted">›</span>
             </Link>
@@ -45,10 +45,10 @@ function MasterPage<T extends { id: string; active: boolean; inUse?: boolean }>(
 }: { title: string; items?: T[]; loading: boolean; render: (t: T) => ReactNode; empty: string; onNew: () => void; editor: ReactNode }) {
   return (
     <>
-      <PageHeader title={title} back="/admin" action={<button className="text-accent font-medium px-2 min-h-11" onClick={onNew}>+ Tambah</button>} />
+      <PageHeader title={title} back="/admin" action={<button className="text-accent-text font-medium px-2 min-h-11" onClick={onNew}>+ Tambah</button>} />
       <Page>
         {loading ? <Spinner /> : !items?.length ? <Empty>{empty}</Empty> : (
-          <div className="rounded-2xl border border-line bg-surface divide-y divide-line overflow-hidden">{items.map((t) => <div key={t.id} className={cx(!t.active && 'opacity-60')}>{render(t)}</div>)}</div>
+          <div className="rounded-3xl border border-line glass divide-y divide-line overflow-hidden">{items.map((t) => <div key={t.id} className={cx(!t.active && 'opacity-60')}>{render(t)}</div>)}</div>
         )}
       </Page>
       {editor}
@@ -58,7 +58,7 @@ function MasterPage<T extends { id: string; active: boolean; inUse?: boolean }>(
 
 function RowButton({ onClick, title, sub, right }: { onClick: () => void; title: ReactNode; sub?: ReactNode; right?: ReactNode }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 px-4 min-h-16 py-2 text-left active:bg-sunken">
+    <button onClick={onClick} className="w-full flex items-center gap-3 px-4 min-h-16 py-2 text-left active:bg-accent-soft">
       <div className="flex-1 min-w-0"><div className="font-medium truncate">{title}</div>{sub ? <div className="text-sm text-muted truncate">{sub}</div> : null}</div>
       {right}
     </button>
@@ -163,7 +163,7 @@ export function AdminPhotographers() {
             onClose={() => { setFuture(null); s.reset(); }} onConfirm={() => save(true)}>
             <p>{edit.name} masih dijadwalkan di booking berikut. Ganti fotografernya di booking tersebut, atau tetap nonaktifkan.</p>
             <ul className="text-sm space-y-1">
-              {future?.map((b) => <li key={b.id}><Link className="text-accent" to={`/bookings/${b.id}`}>{b.bookingNo}</Link> · {b.clientNameSnap} · {longDateId(b.startAt)} {wibTime(b.startAt)}</li>)}
+              {future?.map((b) => <li key={b.id}><Link className="text-accent-text" to={`/bookings/${b.id}`}>{b.bookingNo}</Link> · {b.clientNameSnap} · {longDateId(b.startAt)} {wibTime(b.startAt)}</li>)}
             </ul>
           </Confirm>
         </>

@@ -146,9 +146,9 @@ export function AdminTemplates() {
           <textarea rows={12} className={cx(inputCls, 'text-sm font-mono')} value={body} onChange={(e) => setBody(e.target.value)} aria-invalid={unknown.length > 0 || undefined} />
         </Field>
         <div className="flex flex-wrap gap-1.5">
-          {q.data.placeholders.map((p: string) => <button key={p} type="button" onClick={() => insert(p)} className="rounded-full bg-accent-soft text-accent text-xs px-2.5 py-1.5">{`{${p}}`}</button>)}
+          {q.data.placeholders.map((p: string) => <button key={p} type="button" onClick={() => insert(p)} className="rounded-full bg-accent-soft text-accent-text text-xs px-2.5 py-1.5">{`{${p}}`}</button>)}
         </div>
-        <button className="text-sm text-accent underline" onClick={() => setBody(q.data.defaults[kind])}>Kembalikan ke default</button>
+        <button className="text-sm text-accent-text underline" onClick={() => setBody(q.data.defaults[kind])}>Kembalikan ke default</button>
         <Card>
           <h3 className="text-sm font-medium text-muted mb-2">Pratinjau</h3>
           <pre className="whitespace-pre-wrap text-sm font-sans">{renderTemplate(body, SAMPLE)}</pre>
@@ -213,7 +213,7 @@ export function AdminIntegrations() {
             {cals.isLoading ? <Spinner /> : (
               <div className="space-y-2">
                 {cals.data?.map((c: any) => (
-                  <label key={c.id} className={cx('flex items-center gap-3 rounded-xl border px-3 min-h-11', pick === c.id ? 'border-accent bg-accent-soft' : 'border-line')}>
+                  <label key={c.id} className={cx('flex items-center gap-3 rounded-xl border px-3 min-h-11', pick === c.id ? 'border-accent-text bg-accent-soft' : 'border-line')}>
                     <input type="radio" name="cal" checked={pick === c.id} onChange={() => setPick(c.id)} />
                     <span className="flex-1">{c.name}{c.primary ? ' (utama)' : ''}</span>
                     <span className="text-xs text-muted">{c.timeZone}</span>

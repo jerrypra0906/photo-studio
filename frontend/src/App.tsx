@@ -49,15 +49,15 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
 const Icon = {
   home: <path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" />,
-  cal: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
+  cal: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
   list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
-  money: <><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="3" /></>,
+  money: <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></>,
 };
 
 function Tab({ to, label, icon }: { to: string; label: string; icon: ReactNode }) {
   return (
-    <NavLink to={to} end={to === '/'} className={({ isActive }) => cx('flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium h-16', isActive ? 'text-accent' : 'text-muted')}>
+    <NavLink to={to} end={to === '/'} className={({ isActive }) => cx('w-16 h-[52px] rounded-[26px] flex flex-col items-center justify-center gap-0.5 text-[11px] transition-colors', isActive ? 'bg-accent-soft text-accent-text font-semibold' : 'text-muted font-medium active:bg-accent-soft')}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
       {label}
     </NavLink>
@@ -73,19 +73,21 @@ function Shell() {
   const press = useRef<number | undefined>(undefined);
   const long = useRef(false);
   return (
-    <div className="min-h-dvh pb-20">
+    <div className="min-h-dvh pb-32">
       <Outlet />
-      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-line bg-surface/95 backdrop-blur safe-bottom" aria-label="Navigasi utama">
-        <div className="mx-auto max-w-[480px] flex items-center">
+      <nav className="fixed inset-x-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40" aria-label="Navigasi utama">
+        <div className="mx-auto max-w-[448px] h-[68px] px-1.5 flex items-center justify-around rounded-[34px] border border-line-strong bg-nav backdrop-blur-xl shadow-[inset_0_1px_0_var(--color-hi),0_16px_40px_var(--color-shadow)]">
           <Tab to="/" label="Beranda" icon={Icon.home} />
           <Tab to="/schedule" label="Jadwal" icon={Icon.cal} />
-          <div className="flex-1 grid place-items-center">
-            <button aria-label="Baru" className="size-14 -mt-6 rounded-full bg-accent text-accent-ink text-3xl leading-none shadow-lg active:scale-95 transition-transform select-none"
+          <div className="grid place-items-center">
+            <button aria-label="Baru" className="size-14 grid place-items-center rounded-full bg-accent text-accent-ink shadow-[0_0_0_6px_var(--color-accent-soft),0_0_28px_var(--color-glow)] active:scale-95 transition-transform select-none"
               onPointerDown={() => { long.current = false; press.current = window.setTimeout(() => { long.current = true; if (owner) setChoose(true); }, 500); }}
               onPointerUp={() => clearTimeout(press.current)}
               onPointerLeave={() => clearTimeout(press.current)}
               onContextMenu={(e) => e.preventDefault()}
-              onClick={() => { if (!long.current) nav('/bookings/new'); }}>+</button>
+              onClick={() => { if (!long.current) nav('/bookings/new'); }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+            </button>
           </div>
           {owner ? <Tab to="/finance" label="Keuangan" icon={Icon.money} /> : <Tab to="/bookings" label="Booking" icon={Icon.list} />}
           {owner ? <Tab to="/admin" label="Admin" icon={Icon.gear} /> : <Tab to="/me" label="Akun" icon={Icon.gear} />}

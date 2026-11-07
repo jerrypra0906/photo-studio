@@ -113,8 +113,8 @@ export default function ExpenseForm() {
 
         <Field label="Kaitkan ke booking (opsional)">
           {booking ? (
-            <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 min-h-11">
-              <Link to={`/bookings/${booking.id}`} className="flex-1 text-accent">{booking.bookingNo} {booking.clientNameSnap}</Link>
+            <div className="flex items-center gap-2 rounded-2xl border border-line glass px-4 min-h-11">
+              <Link to={`/bookings/${booking.id}`} className="flex-1 text-accent-text">{booking.bookingNo} {booking.clientNameSnap}</Link>
               <button className="text-muted min-h-11 px-2" onClick={() => setBooking(null)} aria-label="Lepaskan booking">✕</button>
             </div>
           ) : (
@@ -130,13 +130,13 @@ export default function ExpenseForm() {
         </Field>
 
         <Field label="Foto bukti (opsional)" hint="JPG, PNG atau PDF, maks 5 MB">
-          <input type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" className="block w-full text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-accent-soft file:px-4 file:text-accent"
+          <input type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" className="block w-full text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-accent-soft file:px-4 file:text-accent-text"
             onChange={(e) => {
               const f = e.target.files?.[0] ?? null;
               if (f && f.size > 5 * 1024 * 1024) { setFormError('Ukuran file maksimal 5 MB'); e.target.value = ''; return; }
               setFile(f);
             }} />
-          {existing.data?.receiptKey && !file ? <a href="#" className="text-sm text-accent" onClick={async (ev) => { ev.preventDefault(); const b = await api.blob(`/expenses/${id}/receipt`); window.open(URL.createObjectURL(b)); }}>Lihat bukti tersimpan</a> : null}
+          {existing.data?.receiptKey && !file ? <a href="#" className="text-sm text-accent-text" onClick={async (ev) => { ev.preventDefault(); const b = await api.blob(`/expenses/${id}/receipt`); window.open(URL.createObjectURL(b)); }}>Lihat bukti tersimpan</a> : null}
         </Field>
       </Page>
       <BottomBar><Button className="w-full" disabled={!valid} busy={busy} onClick={() => save(false)}>Simpan</Button></BottomBar>

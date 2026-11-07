@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { formatRp, formatRpCompact, monthLabelId, shortMonthId } from '@jes/shared';
 import { api } from '../api';
 import { BarList, ColumnChart, Legend, Sparkline } from '../charts';
-import { Banner, Card, Chip, Empty, Page, PageHeader, Spinner, cx } from '../ui';
+import { Banner, Card, Empty, Page, PageHeader, Spinner, cx } from '../ui';
 import { FinanceTabs } from './Finance';
 
 interface Month {
@@ -44,8 +44,8 @@ function Delta({ value, upIsGood = true, format = formatRpCompact, vs }: { value
 function StatTile({ label, value, delta, spark, color }: { label: string; value: string; delta: React.ReactNode; spark?: number[]; color?: string }) {
   return (
     <Card className="space-y-1 p-3">
-      <div className="text-xs text-muted">{label}</div>
-      <div className="text-xl font-semibold">{value}</div>
+      <div className="hud text-[10px] text-muted">{label}</div>
+      <div className="font-display text-xl font-semibold tabular">{value}</div>
       <div>{delta}</div>
       {spark && color ? <Sparkline values={spark} color={color} /> : null}
     </Card>
@@ -53,6 +53,20 @@ function StatTile({ label, value, delta, spark, color }: { label: string; value:
 }
 
 /** Owner dashboard: this month at a glance, income vs expenses and the net-profit trend (FR-23, FR-28). */
+/** Two-option switch: one pill track, the chosen option lit. */
+function Segmented<T extends string | number>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: [T, string][] }) {
+  return (
+    <div role="group" aria-label={label} className="inline-flex rounded-full glass border border-line p-1">
+      {options.map(([v, text]) => (
+        <button key={String(v)} type="button" aria-pressed={value === v} onClick={() => onChange(v)}
+          className={cx('min-h-10 rounded-full px-3.5 text-sm font-medium transition-colors', value === v ? 'bg-accent text-accent-ink shadow-[0_4px_14px_-4px_var(--color-glow)]' : 'text-muted')}>
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [range, setRange] = useState(readRange);
   const [basis, setBasis] = useState<'' | 'BILLED' | 'COLLECTED'>('');
@@ -79,12 +93,9 @@ export default function Dashboard() {
       <PageHeader title="Keuangan" />
       <FinanceTabs />
       <Page className="pb-8">
-        <div className="flex items-center gap-1.5">
-          <Chip className="px-3" active={range === 6} onClick={() => pickRange(6)}>6 bln</Chip>
-          <Chip className="px-3" active={range === 12} onClick={() => pickRange(12)}>12 bln</Chip>
-          <span className="flex-1" />
-          <Chip className="px-3" active={effBasis === 'BILLED'} onClick={() => setBasis('BILLED')}>Ditagih</Chip>
-          <Chip className="px-3" active={effBasis === 'COLLECTED'} onClick={() => setBasis('COLLECTED')}>Diterima</Chip>
+        <div className="flex items-center justify-between gap-2">
+          <Segmented label="Periode" value={range} onChange={pickRange} options={[[6, '6 bln'], [12, '12 bln']]} />
+          <Segmented<'BILLED' | 'COLLECTED'> label="Dasar" value={effBasis === 'COLLECTED' ? 'COLLECTED' : 'BILLED'} onChange={setBasis} options={[['BILLED', 'Ditagih'], ['COLLECTED', 'Diterima']]} />
         </div>
 
         {q.isLoading || !t || !cur ? <Spinner /> : !hasData ? (
@@ -93,9 +104,9 @@ export default function Dashboard() {
           <>
             {/* Hero: the one number this view leads with */}
             <Link to={`/finance/recap?month=${cur.month}`} className="block">
-              <Card className="py-5 text-center space-y-1">
-                <div className="text-sm text-muted">Laba bersih {monthLabelId(cur.month)}</div>
-                <div className={cx('text-5xl font-bold tracking-tight', cur.net < 0 ? 'text-bad' : 'text-ink')}>{formatRpCompact(cur.net)}</div>
+              <Card className="py-6 text-center space-y-1.5 border-line-strong shadow-[inset_0_1px_0_var(--color-hi),0_24px_60px_-28px_var(--color-glow)]">
+                <div className="hud text-muted">Laba bersih · {monthLabelId(cur.month)}</div>
+                <div className={cx('font-display text-5xl font-semibold tracking-tight tabular', cur.net < 0 ? 'text-bad' : 'text-ink')}>{formatRpCompact(cur.net)}</div>
                 {cur.net < 0 ? <div className="text-sm text-bad font-medium">Rugi {formatRp(-cur.net)}</div> : <div className="text-sm text-muted">{formatRp(cur.net)}</div>}
                 {prev ? <Delta value={cur.net - prev.net} vs={shortMonthId(prev.month)} /> : null}
               </Card>
@@ -105,7 +116,7 @@ export default function Dashboard() {
               <Link to={`/finance/recap?month=${running.month}`} className="block">
                 <Card className="p-3 space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="font-medium">{monthLabelId(running.month)} · berjalan</span>
+                    <span className="font-medium flex items-center gap-2"><span className="size-2 rounded-full bg-accent-text pulse-dot" aria-hidden />{monthLabelId(running.month)} · berjalan</span>
                     <span className={cx('tabular font-semibold', running.net < 0 && 'text-bad')}>{formatRpCompact(running.net)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-muted tabular">
@@ -141,7 +152,7 @@ export default function Dashboard() {
                   <h2 className="font-semibold">Pendapatan vs pengeluaran</h2>
                   <p className="text-xs text-muted">{monthLabelId(t.start)} – {monthLabelId(t.end)} · {effBasis === 'BILLED' ? 'ditagih' : 'diterima'}</p>
                 </div>
-                <button className="text-xs text-accent underline min-h-11 px-1" onClick={() => setTable(!table)}>{table ? 'Lihat grafik' : 'Lihat tabel'}</button>
+                <button className="text-xs text-accent-text underline min-h-11 px-1" onClick={() => setTable(!table)}>{table ? 'Lihat grafik' : 'Lihat tabel'}</button>
               </div>
               <Legend items={[{ name: 'Pendapatan', color: INCOME }, { name: 'Pengeluaran', color: EXPENSE }]} />
               {table ? <MonthTable months={t.months} /> : (
@@ -276,7 +287,7 @@ function MonthTable({ months }: { months: Month[] }) {
         <tbody>
           {[...months].reverse().map((m) => (
             <tr key={m.month} className="border-b border-line last:border-0">
-              <td className="py-2 pl-4"><Link to={`/finance/recap?month=${m.month}`} className="text-accent">{shortMonthId(m.month, true)}</Link>{m.partial ? '*' : ''}</td>
+              <td className="py-2 pl-4"><Link to={`/finance/recap?month=${m.month}`} className="text-accent-text">{shortMonthId(m.month, true)}</Link>{m.partial ? '*' : ''}</td>
               <td className="text-right">{formatRpCompact(m.revenue)}</td>
               <td className="text-right">{formatRpCompact(m.expenses)}</td>
               <td className={cx('text-right pr-4 font-medium', m.net < 0 && 'text-bad')}>{formatRpCompact(m.net)}</td>

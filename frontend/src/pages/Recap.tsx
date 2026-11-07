@@ -65,7 +65,7 @@ export default function Recap() {
             {/* Net profit first (PRD §8.6) */}
             <Card className="text-center py-6">
               <div className="text-sm text-muted">Laba bersih{r.marginPct != null ? ` · margin ${r.marginPct}%` : ''}</div>
-              <Money value={r.netProfit} className={cx('text-4xl font-bold block my-1', r.netProfit < 0 ? 'text-bad' : 'text-ok')} />
+              <Money value={r.netProfit} className={cx('font-display text-5xl font-semibold tracking-tight block my-1', r.netProfit < 0 ? 'text-bad' : 'text-ok')} />
               {r.netProfit < 0 ? <div className="text-sm text-bad">Rugi {formatRp(-r.netProfit)}</div> : null}
               <div className="text-sm text-muted">vs {monthLabelId(r.previous.month)}: <span className={prevDelta < 0 ? 'text-bad' : 'text-ok'}>{prevDelta >= 0 ? '+' : ''}{formatRp(prevDelta)}</span></div>
             </Card>
@@ -97,7 +97,7 @@ export default function Recap() {
               {r.receivables.items.length === 0 ? <p className="text-sm text-muted">Semua sudah lunas.</p> : r.receivables.items.map((x: any) => (
                 <Link key={x.id} to={`/bookings/${x.id}`} className="flex justify-between gap-2 text-sm min-h-11 items-center border-t border-line first:border-0">
                   <span className="truncate">{shortDateId(x.startAt)} · {x.clientName} <span className="text-muted">{x.bookingNo}</span></span>
-                  <span className="tabular text-accent">{formatRp(x.balance)}</span>
+                  <span className="tabular text-accent-text">{formatRp(x.balance)}</span>
                 </Link>
               ))}
             </Card>

@@ -17,15 +17,15 @@ export function Logo({ className }: { className?: string }) {
 // ---------- buttons ----------
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-accent text-accent-ink active:opacity-90 disabled:opacity-40',
-  secondary: 'bg-surface border border-line text-ink active:bg-sunken disabled:opacity-40',
-  ghost: 'text-accent active:bg-accent-soft disabled:opacity-40',
+  primary: 'bg-accent text-accent-ink font-semibold shadow-[0_8px_24px_-8px_var(--color-glow)] active:scale-[0.98] active:opacity-90 disabled:opacity-40 disabled:shadow-none',
+  secondary: 'glass border border-line text-ink active:bg-accent-soft disabled:opacity-40',
+  ghost: 'text-accent-text active:bg-accent-soft disabled:opacity-40',
   danger: 'bg-bad text-white active:opacity-90 disabled:opacity-40',
 };
 export function Button({ variant = 'primary', className, busy, children, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; busy?: boolean }) {
   return (
     <button {...p} disabled={p.disabled || busy}
-      className={cx('min-h-11 rounded-xl px-4 font-medium inline-flex items-center justify-center gap-2 transition-colors', VARIANT[variant], className)}>
+      className={cx('min-h-12 rounded-2xl px-5 font-medium inline-flex items-center justify-center gap-2 transition-[transform,background-color,opacity]', VARIANT[variant], className)}>
       {busy ? <span className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-hidden /> : null}
       {children}
     </button>
@@ -43,7 +43,7 @@ export function Field({ label, error, hint, children, htmlFor }: { label: string
   );
 }
 
-export const inputCls = 'w-full min-h-11 rounded-xl border border-line bg-surface px-3 py-2 outline-none focus:border-accent aria-[invalid=true]:border-bad';
+export const inputCls = 'w-full min-w-0 min-h-12 rounded-2xl border border-line bg-card px-4 py-2 outline-none transition-shadow focus:border-accent-text focus:shadow-[0_0_0_4px_var(--color-accent-soft)] aria-[invalid=true]:border-bad';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(function Input({ invalid, className, ...p }, ref) {
   return <input ref={ref} {...p} aria-invalid={invalid || undefined} className={cx(inputCls, className)} />;
@@ -59,9 +59,9 @@ export function MoneyInput({ value, onChange, invalid, allowNegative, id, placeh
   }, [value]);
   return (
     <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">Rp</span>
+      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-mono text-sm">Rp</span>
       <input id={id} inputMode={allowNegative ? 'text' : 'numeric'} placeholder={placeholder ?? '0'} aria-invalid={invalid || undefined}
-        className={cx(inputCls, 'pl-10 tabular text-right')} value={text}
+        className={cx(inputCls, 'pl-12 tabular text-right')} value={text}
         onChange={(e) => {
           let raw = e.target.value;
           if (!allowNegative) raw = raw.replace(/[-−]/g, '');
@@ -77,10 +77,10 @@ export function MoneyInput({ value, onChange, invalid, allowNegative, id, placeh
 export function Stepper({ value, min, max, onChange, suffix, maxHint }: { value: number; min: number; max: number; onChange: (v: number) => void; suffix?: string; maxHint?: string }) {
   return (
     <div>
-      <div className="inline-flex items-center rounded-xl border border-line bg-surface">
-        <button type="button" aria-label="Kurangi" className="size-11 text-xl disabled:opacity-30" disabled={value <= min} onClick={() => onChange(value - 1)}>−</button>
-        <span className="min-w-16 text-center font-semibold tabular">{value}{suffix ? ` ${suffix}` : ''}</span>
-        <button type="button" aria-label="Tambah" className="size-11 text-xl disabled:opacity-30" disabled={value >= max} onClick={() => onChange(value + 1)}>+</button>
+      <div className="inline-flex items-center gap-1 rounded-2xl border border-line glass p-1">
+        <button type="button" aria-label="Kurangi" className="size-11 rounded-xl bg-surface border border-line text-xl disabled:opacity-30" disabled={value <= min} onClick={() => onChange(value - 1)}>−</button>
+        <span className="min-w-16 text-center font-display text-base font-semibold tabular whitespace-nowrap">{value}{suffix ? ` ${suffix}` : ''}</span>
+        <button type="button" aria-label="Tambah" className="size-11 rounded-xl bg-surface border border-line text-xl disabled:opacity-30" disabled={value >= max} onClick={() => onChange(value + 1)}>+</button>
       </div>
       {value >= max && maxHint ? <p className="text-xs text-muted mt-1">{maxHint}</p> : null}
     </div>
@@ -91,7 +91,7 @@ export function Chip({ active, disabled, onClick, children, className }: { activ
   return (
     <button type="button" disabled={disabled} onClick={onClick} aria-pressed={active}
       className={cx('min-h-11 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors',
-        active ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface', disabled && 'opacity-40 line-through', className)}>
+        active ? 'border-transparent bg-accent text-accent-ink shadow-[0_0_18px_var(--color-glow)]' : 'border-line glass', disabled && 'opacity-40 line-through', className)}>
       {children}
     </button>
   );
@@ -102,7 +102,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
     <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer">
       <span>{label}</span>
       <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
-        className={cx('relative h-7 w-12 rounded-full transition-colors shrink-0', checked ? 'bg-accent' : 'bg-line')}>
+        className={cx('relative h-7 w-12 rounded-full transition-colors shrink-0', checked ? 'bg-accent shadow-[0_0_14px_var(--color-glow)]' : 'bg-line')}>
         <span className={cx('absolute top-0.5 size-6 rounded-full bg-white shadow transition-all', checked ? 'left-[22px]' : 'left-0.5')} />
       </button>
     </label>
@@ -111,20 +111,20 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 
 // ---------- layout ----------
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('rounded-2xl bg-surface border border-line p-4', className)}>{children}</div>;
+  return <div className={cx('rounded-3xl glass border border-line p-4', className)}>{children}</div>;
 }
 
 export function PageHeader({ title, back, action }: { title: string; back?: string | boolean; action?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur border-b border-line">
-      <div className="mx-auto max-w-[480px] flex items-center gap-2 px-4 h-14">
+    <header className="sticky top-0 z-20 bg-bg/70 backdrop-blur-xl border-b border-line">
+      <div className="mx-auto max-w-[480px] flex items-center gap-3 px-4 h-16">
         {back ? (
-          <Link to={typeof back === 'string' ? back : '..'} className="-ml-2 size-11 grid place-items-center rounded-full active:bg-sunken" aria-label="Kembali"
+          <Link to={typeof back === 'string' ? back : '..'} className="size-11 grid place-items-center rounded-full glass border border-line active:bg-accent-soft" aria-label="Kembali"
             onClick={(e) => { if (back === true) { e.preventDefault(); history.back(); } }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           </Link>
         ) : null}
-        <h1 className="text-lg font-semibold flex-1 truncate">{title}</h1>
+        <h1 className="text-xl font-semibold flex-1 truncate">{title}</h1>
         {action}
       </div>
     </header>
@@ -138,15 +138,15 @@ export function Page({ children, className }: { children: ReactNode; className?:
 /** Sticky bottom action bar sitting above the tab bar (PRD §8.1.1 thumb zone). */
 export function BottomBar({ children, withNav = true }: { children: ReactNode; withNav?: boolean }) {
   return (
-    <div className={cx('fixed inset-x-0 z-30 border-t border-line bg-surface/95 backdrop-blur', withNav ? 'bottom-16' : 'bottom-0 safe-bottom')}>
-      <div className="mx-auto max-w-[480px] px-4 py-3">{children}</div>
+    <div className={cx('fixed inset-x-0 z-30 px-3', withNav ? 'bottom-[calc(6rem+env(safe-area-inset-bottom))]' : 'bottom-[calc(1rem+env(safe-area-inset-bottom))]')}>
+      <div className="mx-auto max-w-[464px] rounded-[28px] border border-line-strong bg-nav backdrop-blur-xl p-2.5 shadow-[inset_0_1px_0_var(--color-hi),0_16px_40px_var(--color-shadow)]">{children}</div>
     </div>
   );
 }
 
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-line p-6 text-center text-muted space-y-3">
+    <div className="rounded-3xl border border-dashed border-line-strong p-6 text-center text-muted space-y-3">
       <p>{children}</p>
       {action}
     </div>
@@ -154,9 +154,9 @@ export function Empty({ children, action }: { children: ReactNode; action?: Reac
 }
 
 export function Banner({ tone = 'warn', children, action }: { tone?: 'warn' | 'bad' | 'ok' | 'info'; children: ReactNode; action?: ReactNode }) {
-  const t = { warn: 'bg-warn-soft text-warn', bad: 'bg-bad-soft text-bad', ok: 'bg-ok-soft text-ok', info: 'bg-accent-soft text-accent' }[tone];
+  const t = { warn: 'bg-warn-soft text-warn', bad: 'bg-bad-soft text-bad', ok: 'bg-ok-soft text-ok', info: 'bg-accent-soft text-accent-text' }[tone];
   return (
-    <div className={cx('rounded-xl px-4 py-3 text-sm flex items-center gap-3', t)} role="status">
+    <div className={cx('rounded-2xl px-4 py-3 text-sm flex items-center gap-3', t)} role="status">
       <div className="flex-1">{children}</div>
       {action}
     </div>
@@ -168,30 +168,30 @@ export function Money({ value, className, sign }: { value: number; className?: s
 }
 
 export function Spinner() {
-  return <div className="py-10 grid place-items-center"><span className="size-6 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-label="Memuat" /></div>;
+  return <div className="py-10 grid place-items-center"><span className="size-6 rounded-full border-2 border-accent-text border-t-transparent animate-spin" aria-label="Memuat" /></div>;
 }
 
 // ---------- status badges ----------
 const STATUS: Record<string, [string, string]> = {
-  CONFIRMED: ['Terkonfirmasi', 'bg-accent-soft text-accent'],
+  CONFIRMED: ['Terkonfirmasi', 'bg-accent-soft text-accent-text'],
   COMPLETED: ['Selesai', 'bg-ok-soft text-ok'],
   CANCELLED: ['Dibatalkan', 'bg-sunken text-muted line-through'],
   DRAFT: ['Draft', 'bg-warn-soft text-warn'],
 };
 export function StatusBadge({ status }: { status: string }) {
   const [l, c] = STATUS[status] ?? [status, 'bg-sunken text-muted'];
-  return <span className={cx('rounded-full px-2.5 py-0.5 text-xs font-medium', c)}>{l}</span>;
+  return <span className={cx('rounded-full px-2.5 py-1 text-xs font-semibold', c)}>{l}</span>;
 }
 
 const PAY: Record<string, [string, string]> = {
   UNPAID: ['Belum bayar', 'bg-bad-soft text-bad'],
-  DP_PAID: ['DP', 'bg-warn-soft text-warn'],
+  DP_PAID: ['DP', 'bg-info-soft text-info'],
   PAID: ['Lunas', 'bg-ok-soft text-ok'],
 };
 export function PayBadge({ total, paid }: { total: number; paid: number }) {
   const k = paid <= 0 ? 'UNPAID' : paid >= total ? 'PAID' : 'DP_PAID';
   const [l, c] = PAY[k];
-  return <span className={cx('rounded-full px-2.5 py-0.5 text-xs font-medium', c)}>{l}</span>;
+  return <span className={cx('rounded-full px-2.5 py-1 text-xs font-semibold', c)}>{l}</span>;
 }
 
 // ---------- sheet (bottom drawer) ----------
@@ -206,8 +206,8 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal aria-label={title}>
-      <button className="absolute inset-0 bg-black/40" aria-label="Tutup" onClick={onClose} />
-      <div className="relative w-full max-w-[480px] max-h-[92dvh] flex flex-col rounded-t-3xl bg-bg safe-bottom">
+      <button className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-label="Tutup" onClick={onClose} />
+      <div className="relative w-full max-w-[480px] max-h-[92dvh] flex flex-col rounded-t-[28px] border-t border-line-strong bg-surface shadow-[0_-20px_60px_-20px_var(--color-glow)] safe-bottom">
         <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-line">
           <h2 className="font-semibold flex-1">{title}</h2>
           <button onClick={onClose} className="size-11 grid place-items-center rounded-full active:bg-sunken" aria-label="Tutup">✕</button>

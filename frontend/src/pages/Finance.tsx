@@ -7,7 +7,7 @@ import { Banner, Button, Card, Empty, Money, MoneyInput, Page, PageHeader, Sheet
 
 export function MonthSwitcher({ month, onChange }: { month: string; onChange: (m: string) => void }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl bg-surface border border-line">
+    <div className="flex items-center justify-between rounded-3xl glass border border-line">
       <button className="size-11 grid place-items-center text-xl" aria-label="Bulan sebelumnya" onClick={() => onChange(shiftMonth(month, -1))}>‹</button>
       <span className="font-semibold">{monthLabelId(month)}</span>
       <button className="size-11 grid place-items-center text-xl disabled:opacity-30" aria-label="Bulan berikutnya" disabled={month >= wibMonth(new Date())} onClick={() => onChange(shiftMonth(month, 1))}>›</button>
@@ -97,7 +97,7 @@ export default function Finance() {
 
 export function ExpenseRow({ e }: { e: any }) {
   return (
-    <Link to={`/finance/expenses/${e.id}`} className="flex items-center gap-3 rounded-2xl bg-surface border border-line p-3 active:bg-sunken">
+    <Link to={`/finance/expenses/${e.id}`} className="flex items-center gap-3 rounded-3xl glass border border-line p-3 active:bg-accent-soft">
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{e.categoryName}{e.payee ? <span className="text-muted font-normal"> · {e.payee}</span> : null}</div>
         <div className="text-xs text-muted truncate">{shortDateId(e.paidOn + 'T05:00:00Z')}{e.note ? ` · ${e.note}` : ''}{e.receiptKey ? ' · 📎' : ''}</div>
@@ -112,7 +112,7 @@ function Kpi({ label, value, big, tone }: { label: string; value: number; big?: 
   return (
     <Card className={cx(big && 'py-5')}>
       <div className="text-sm text-muted">{label}</div>
-      <Money value={value} className={cx('font-semibold block', big ? 'text-3xl' : 'text-lg', tone === 'bad' && 'text-bad', tone === 'ok' && 'text-ok')} />
+      <Money value={value} className={cx('font-semibold block', big ? 'font-display text-4xl tracking-tight' : 'font-display text-lg', tone === 'bad' && 'text-bad', tone === 'ok' && 'text-ok')} />
     </Card>
   );
 }
@@ -144,7 +144,7 @@ function ConfirmDraft({ e, onClose }: { e: any; onClose: () => void }) {
         </div>
       }>
       <p className="font-medium">{e.note ?? e.categoryName}</p>
-      {e.bookingNo ? <Link to={`/bookings/${e.bookingId}`} className="text-sm text-accent">Lihat booking {e.bookingNo}</Link> : null}
+      {e.bookingNo ? <Link to={`/bookings/${e.bookingId}`} className="text-sm text-accent-text">Lihat booking {e.bookingNo}</Link> : null}
       <MoneyInput value={amount} onChange={setAmount} />
       <p className="text-sm text-muted">Isi Rp0 bila tidak ada biaya (mis. Owner memotret sendiri).</p>
       {error ? <Banner tone="bad">{error}</Banner> : null}
