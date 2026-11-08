@@ -1,13 +1,12 @@
 // API smoke test against a running stack: node backend/test/smoke.mjs [baseUrl]
 // Walks the PRD acceptance scenarios that matter most. Creates data; run on a dev database only.
 import assert from 'node:assert/strict';
-import { resetLoginThrottle } from './lib.mjs';
+import { OWNER, STAFF, resetLoginThrottle } from './lib.mjs';
 
 resetLoginThrottle(); // earlier attack tests may have tripped the per-IP login throttle
 
 const BASE = (process.argv[2] ?? 'http://localhost:8080') + '/api/v1';
-const OWNER = { email: process.env.OWNER_EMAIL ?? 'owner@jes.local', password: process.env.OWNER_PASSWORD ?? '' };
-const STAFF = { email: process.env.STAFF_EMAIL ?? 'staff@jes.local', password: process.env.STAFF_PASSWORD ?? '' };
+// credentials come from .env (SEED_OWNER_*, SEED_STAFF_*) via lib.mjs; never hardcode them here
 
 let passed = 0;
 async function step(name, fn) {
