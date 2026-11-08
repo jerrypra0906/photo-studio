@@ -32,6 +32,8 @@ export const bookingInput = z.object({
   afterHoursReason: z.string().trim().max(200).optional().nullable(),
   /** On edit: re-price add-ons and type from the current master (L2-1.3.4); default keep snapshot. */
   applyCurrentPrices: z.boolean().optional(),
+  /** On create: the Google Calendar inbox item this booking comes from; the booking takes over its event. */
+  gcalInboxId: uuid.optional().nullable(),
 });
 export type BookingInput = z.infer<typeof bookingInput>;
 

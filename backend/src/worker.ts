@@ -9,6 +9,7 @@ import { GoogleService } from './modules/google.service';
 /**
  * Background worker (TD: same codebase, separate process).
  * - Calendar outbox: woken by NOTIFY gcal_outbox, plus a 15 s sweep for retries.
+ * - Calendar inbox: pulls events made directly in Google Calendar every 3 minutes.
  * - Recurring expense drafts (FR-25): idempotent hourly check for the current month.
  */
 const db = new Db();
@@ -44,6 +45,14 @@ async function housekeeping() {
   await pool.query(`DELETE FROM idempotency_keys WHERE created_at < now() - interval '7 days'`);
 }
 
+/** Google → app: new events made directly in Google Calendar go to the inbox. */
+let pulling = false;
+async function pull() {
+  if (pulling) return;
+  pulling = true;
+  try { await google.pull(); } catch (e: any) { console.warn('gcal pull failed:', e?.message ?? e); } finally { pulling = false; }
+}
+
 async function listen() {
   const c = new Client({ connectionString: config.databaseUrl });
   c.on('error', (e) => {
@@ -69,11 +78,13 @@ async function main() {
   const beat = () => { try { writeFileSync('/tmp/worker-heartbeat', String(Date.now())); } catch { /* read-only fs without tmpfs */ } };
   beat();
   timers.push(setInterval(() => { beat(); void drain(); }, 15_000));
+  timers.push(setInterval(() => void pull(), 180_000));
   timers.push(setInterval(() => void recurringDrafts().catch((e) => console.error(e)), 3600_000));
   timers.push(setInterval(() => void housekeeping().catch((e) => console.error(e)), 3600_000));
   await housekeeping().catch((e) => console.error(e));
   await recurringDrafts().catch((e) => console.error(e));
   await drain();
+  await pull();
 }
 
 const timers: NodeJS.Timeout[] = [];
@@ -81,7 +92,7 @@ const timers: NodeJS.Timeout[] = [];
 async function shutdown(signal: string) {
   console.log(`worker: ${signal}, stopping`);
   timers.forEach(clearInterval);
-  for (let i = 0; i < 20 && draining; i++) await new Promise((r) => setTimeout(r, 500));
+  for (let i = 0; i < 20 && (draining || pulling); i++) await new Promise((r) => setTimeout(r, 500));
   await pool.end().catch(() => undefined);
   process.exit(0);
 }

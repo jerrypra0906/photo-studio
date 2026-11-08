@@ -11,7 +11,7 @@ const SYNC_LABEL: Record<string, [string, string]> = {
   SYNCED: ['Tersinkron', 'text-ok'], PENDING: ['Menunggu sinkron…', 'text-warn'], FAILED: ['Kalender belum diperbarui', 'text-bad'],
 };
 const ACTION_LABEL: Record<string, string> = {
-  CREATE: 'Dibuat', EDIT: 'Diubah', RESCHEDULE: 'Dijadwal ulang', CANCEL: 'Dibatalkan', COMPLETE: 'Diselesaikan', PAYMENT: 'Pembayaran dicatat',
+  CREATE: 'Dibuat', GCAL_LINK: 'Diambil dari Google Calendar', EDIT: 'Diubah', RESCHEDULE: 'Dijadwal ulang', CANCEL: 'Dibatalkan', COMPLETE: 'Diselesaikan', PAYMENT: 'Pembayaran dicatat',
   INVOICE_SENT: 'Invoice ditandai terkirim', INVOICE_SENT_UNDO: 'Tanda terkirim dibatalkan', INVOICE_ISSUED: 'Invoice dibuat',
 };
 const FIELD_LABEL: Record<string, string> = {

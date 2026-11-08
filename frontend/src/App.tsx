@@ -15,6 +15,7 @@ import Dashboard from './pages/Dashboard';
 import Account from './pages/Account';
 import ExpenseForm from './pages/ExpenseForm';
 import Recap from './pages/Recap';
+import CalendarInbox from './pages/CalendarInbox';
 import { AdminHome, AdminTypes, AdminPhotographers, AdminAddons, AdminCategories, AdminUsers } from './pages/AdminMasters';
 import { AdminSettings, AdminTemplates, AdminIntegrations } from './pages/AdminSettings';
 
@@ -134,6 +135,7 @@ export default function App() {
                 <Route path="bookings/:id" element={<BookingDetail />} />
                 <Route path="bookings/:id/edit" element={<BookingForm />} />
                 <Route path="me" element={<Account />} />
+                <Route path="calendar-inbox" element={<CalendarInbox />} />
                 <Route element={<OwnerOnly />}>
                   <Route path="finance" element={<Dashboard />} />
                   <Route path="finance/expenses" element={<Finance />} />

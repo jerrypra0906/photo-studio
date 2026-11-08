@@ -9,6 +9,13 @@ import { useIsOwner } from '../App';
 import { UNIT_LABEL, useAddons, usePhotographers, useSettings, useTypes } from '../hooks';
 import { Banner, BottomBar, Button, Card, Chip, Empty, Field, Input, MoneyInput, Page, PageHeader, Spinner, Stepper, Toggle, cx, inputCls, useToast } from '../ui';
 
+/** Google event descriptions may carry simple HTML. */
+const plainText = (html: string) => html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li)>/gi, '\n').replace(/<[^>]+>/g, '')
+  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+  .replace(/\n{3,}/g, '\n\n').trim();
+/** First Indonesian mobile number in the text, if any. */
+const findPhone = (t: string) => t.match(/(?:\+?62|0)8[\d\s.-]{7,14}\d/)?.[0].replace(/[\s.-]/g, '') ?? '';
+
 interface FormState {
   typeId: string; hours: number; date: string; startTime: string; clientName: string; clientPhone: string; photographerId: string | null;
   addons: Record<string, number>; adjustment: number; adjustmentReason: string; dpAmount: number; notes: string; afterHoursReason: string;
@@ -31,6 +38,10 @@ export default function BookingForm() {
   const existing = useQuery({ queryKey: ['booking', id], queryFn: () => api.get(`/bookings/${id}`), enabled: editing });
   const today = wibDate(new Date());
   const duplicateOf = (loc.state as any)?.duplicate;
+  // made in Google Calendar first (calendar inbox): prefill from the event and link it on save
+  const inboxId = !editing ? sp.get('inbox') : null;
+  const inbox = useQuery({ queryKey: ['calendar-inbox', 'item', inboxId], queryFn: () => api.get(`/calendar-inbox/${inboxId}`), enabled: !!inboxId, retry: false });
+  const fromCal = inbox.data?.status === 'PENDING' ? inbox.data : null;
 
   const [f, setF] = useState<FormState | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -43,7 +54,7 @@ export default function BookingForm() {
 
   // initialise once data is loaded
   useEffect(() => {
-    if (f || !types.data || (editing && !existing.data)) return;
+    if (f || !types.data || (editing && !existing.data) || (inboxId && inbox.isLoading)) return;
     const src = editing ? existing.data : duplicateOf;
     if (src) {
       setF({
@@ -58,11 +69,23 @@ export default function BookingForm() {
       return;
     }
     const active = types.data.filter((t) => t.active);
+    if (fromCal) {
+      const start = new Date(fromCal.startAt);
+      const hours = Math.min(24, Math.max(1, Math.ceil((new Date(fromCal.endAt).getTime() - start.getTime()) / 3600_000)));
+      const desc = plainText(fromCal.description ?? '');
+      setF({
+        typeId: active.length === 1 ? active[0].id : '', hours, date: wibDate(start), startTime: wibTime(start),
+        clientName: (fromCal.summary ?? '').trim().slice(0, 60), clientPhone: findPhone(desc), photographerId: null, addons: {},
+        adjustment: 0, adjustmentReason: '', dpAmount: 0, notes: desc.slice(0, 1000), afterHoursReason: '',
+      });
+      if (desc) setShowPayment(true);
+      return;
+    }
     setF({
       typeId: active.length === 1 ? active[0].id : '', hours: 1, date: sp.get('date') ?? today, startTime: sp.get('time') ?? '',
       clientName: '', clientPhone: '', photographerId: null, addons: {}, adjustment: 0, adjustmentReason: '', dpAmount: 0, notes: '', afterHoursReason: '',
     });
-  }, [types.data, existing.data, editing, f, sp, today, duplicateOf]);
+  }, [types.data, existing.data, editing, f, sp, today, duplicateOf, inboxId, inbox.isLoading, fromCal]);
 
   const sched = useQuery({
     queryKey: ['schedule', 'day', f?.date, id],
@@ -165,6 +188,7 @@ export default function BookingForm() {
       adjustment: owner ? f.adjustment : 0, adjustmentReason: owner && f.adjustment ? f.adjustmentReason : null,
       dpAmount: f.dpAmount, notes: f.notes || null, afterHoursReason: afterHoursMsg ? f.afterHoursReason : null,
       applyCurrentPrices: editing ? applyCurrent : undefined,
+      gcalInboxId: fromCal ? fromCal.id : undefined,
     };
     try {
       const r = editing
@@ -172,6 +196,7 @@ export default function BookingForm() {
         : await api.post('/bookings', body, { 'idempotency-key': idemKey.current });
       qc.invalidateQueries({ queryKey: ['bookings'] });
       qc.invalidateQueries({ queryKey: ['schedule'] });
+      if (fromCal) qc.invalidateQueries({ queryKey: ['calendar-inbox'] });
       qc.setQueryData(['booking', r.id], r);
       toast(editing ? 'Perubahan disimpan' : `Booking ${r.bookingNo} dibuat`);
       nav(`/bookings/${r.id}`, { replace: true, state: { justSaved: true, rescheduled: !!r.rescheduledFrom } });
@@ -201,6 +226,12 @@ export default function BookingForm() {
       <PageHeader title={editing ? `Ubah ${ex.bookingNo}` : 'Booking baru'} back />
       <Page className="pb-44">
         {formError ? <Banner tone="bad">{formError}</Banner> : null}
+        {fromCal ? (
+          <Banner tone="info">
+            Dari Google Calendar: <span className="font-semibold">“{fromCal.summary || 'Tanpa judul'}”</span>. Pilih jenis, lalu lengkapi harga dan no. HP.
+            Setelah disimpan, event yang sama di kalender diperbarui dengan detail booking (tidak dibuat dobel).
+          </Banner>
+        ) : inboxId && !inbox.isLoading ? <Banner tone="warn">Event kalender ini sudah diproses atau dihapus. Booking ini akan dibuat sebagai booking baru biasa.</Banner> : null}
 
         {/* 1. Type */}
         <section className="space-y-2">

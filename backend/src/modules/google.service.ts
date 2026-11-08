@@ -15,6 +15,9 @@ const SCOPES = [
 /** PRD 5.2.7: 30 s, 2 min, 10 min, 1 h, then Failed */
 const BACKOFF_S = [30, 120, 600, 3600];
 
+/** Google → app pull window: from yesterday to this many days ahead. */
+const PULL_DAYS = 180;
+
 const PAY_LABEL = (total: number, paid: number) => (paid >= total ? 'Lunas' : paid > 0 ? 'DP' : 'Belum bayar');
 const wibIso = (d: Date) => `${wibDate(d)}T${wibTime(d)}:00+07:00`;
 
@@ -36,7 +39,7 @@ export class GoogleService {
   }
 
   async status() {
-    const s = await this.db.one(`SELECT gcal_status, gcal_account_email, gcal_calendar_id, gcal_calendar_name, gcal_cancel_mode, gcal_mark_completed FROM settings WHERE id = 1`);
+    const s = await this.db.one(`SELECT gcal_status, gcal_account_email, gcal_calendar_id, gcal_calendar_name, gcal_cancel_mode, gcal_mark_completed, gcal_pulled_at, gcal_pull_error FROM settings WHERE id = 1`);
     const q = await this.db.one(
       `SELECT count(*) FILTER (WHERE done_at IS NULL AND failed_at IS NULL)::int AS pending,
               count(*) FILTER (WHERE failed_at IS NOT NULL AND failed_at > now() - interval '7 days')::int AS failed
@@ -87,6 +90,8 @@ export class GoogleService {
     const c = cals.find((x) => x.id === calendarId);
     if (!c) throw new AppError(400, 'VALIDATION', 'Kalender tidak ditemukan atau tidak bisa ditulis');
     await this.db.many(`UPDATE settings SET gcal_calendar_id = $1, gcal_calendar_name = $2, updated_at = now() WHERE id = 1`, [c.id, c.name]);
+    // waiting events came from the previous calendar
+    await this.db.many(`DELETE FROM gcal_inbox WHERE status = 'PENDING'`);
     const pushed = pushExisting ? await this.resyncAll() : 0;
     return { calendar: c, timeZoneWarning: c.timeZone !== 'Asia/Jakarta' ? `Zona waktu kalender ${c.timeZone}; acara tetap dibuat dalam WIB.` : null, pushed };
   }
@@ -114,13 +119,80 @@ export class GoogleService {
               gcal_status = 'NOT_CONNECTED', updated_at = now() WHERE id = 1`);
     await this.db.many(`UPDATE sync_outbox SET done_at = now(), last_error = 'disconnected' WHERE done_at IS NULL AND failed_at IS NULL`);
     await this.db.many(`UPDATE bookings SET gcal_sync_status = 'NONE' WHERE gcal_sync_status = 'PENDING'`);
+    await this.db.many(`DELETE FROM gcal_inbox WHERE status = 'PENDING'`);
+  }
+
+  /**
+   * Google → app: copy events made directly in Google Calendar into the inbox (read-only on Google's side).
+   * Skips events the app created or already linked, all-day events (reminders, birthdays) and cancelled ones.
+   * A waiting item follows changes in Google and disappears when its event is deleted.
+   */
+  async pull(): Promise<{ added: number; pending: number } | null> {
+    const st = await this.db.one(`SELECT gcal_status, gcal_calendar_id FROM settings WHERE id = 1`);
+    if (st.gcalStatus !== 'CONNECTED' || !st.gcalCalendarId || !googleConfigured()) return null;
+    const { cal, calendarId } = await this.client();
+    const timeMin = new Date(Date.now() - 86400_000);
+    const timeMax = new Date(Date.now() + PULL_DAYS * 86400_000);
+    const items: calendar_v3.Schema$Event[] = [];
+    let pageToken: string | undefined;
+    try {
+      do {
+        const r = await cal.events.list({ calendarId: calendarId!, timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(),
+          singleEvents: true, showDeleted: false, maxResults: 250, pageToken });
+        items.push(...(r.data.items ?? []));
+        pageToken = r.data.nextPageToken ?? undefined;
+      } while (pageToken && items.length < 2500);
+    } catch (e: any) {
+      const msg = String(e?.response?.data?.error_description ?? e?.message ?? e).slice(0, 300);
+      if (/invalid_grant|Token has been expired or revoked/i.test(msg)) await this.db.many(`UPDATE settings SET gcal_status = 'RECONNECT_NEEDED' WHERE id = 1`);
+      await this.db.many(`UPDATE settings SET gcal_pull_error = $1 WHERE id = 1`, [msg]);
+      throw e;
+    }
+    const linked = new Set((await this.db.many(`SELECT gcal_event_id FROM bookings WHERE gcal_event_id IS NOT NULL`)).map((r) => r.gcalEventId));
+    const seen: string[] = [];
+    let added = 0;
+    for (const e of items) {
+      if (!e.id || e.status === 'cancelled' || !e.start?.dateTime || !e.end?.dateTime) continue;
+      if (e.extendedProperties?.private?.jesApp === 'jes-booking' || linked.has(e.id)) continue;
+      if (e.eventType && e.eventType !== 'default') continue; // focus time, out of office, birthdays from contacts
+      seen.push(e.id);
+      const r = await this.db.one(
+        `INSERT INTO gcal_inbox (event_id, summary, description, location, start_at, end_at) VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (event_id) DO UPDATE SET summary = EXCLUDED.summary, description = EXCLUDED.description, location = EXCLUDED.location,
+           start_at = EXCLUDED.start_at, end_at = EXCLUDED.end_at, updated_at = now()
+           WHERE gcal_inbox.status = 'PENDING' AND (gcal_inbox.summary, gcal_inbox.description, gcal_inbox.start_at, gcal_inbox.end_at)
+                 IS DISTINCT FROM (EXCLUDED.summary, EXCLUDED.description, EXCLUDED.start_at, EXCLUDED.end_at)
+         RETURNING (xmax = 0) AS inserted`,
+        [e.id, (e.summary ?? '').slice(0, 300), e.description?.slice(0, 4000) ?? null, e.location?.slice(0, 300) ?? null, e.start.dateTime, e.end.dateTime]);
+      if (r?.inserted) added++;
+    }
+    // deleted in Google (or turned all-day / linked) → no longer waiting
+    await this.db.many(`DELETE FROM gcal_inbox WHERE status = 'PENDING' AND NOT (event_id = ANY($1::text[]))`, [seen]);
+    await this.db.many(`UPDATE settings SET gcal_pulled_at = now(), gcal_pull_error = NULL WHERE id = 1`);
+    const pending = (await this.db.one(`SELECT count(*)::int AS n FROM gcal_inbox WHERE status = 'PENDING' AND end_at > now() - interval '1 day'`)).n;
+    if (added) console.log(`gcal pull: ${added} new event(s) in the inbox`);
+    return { added, pending };
   }
 
   async test() {
     const { cal, calendarId } = await this.client();
     if (!calendarId) throw new AppError(400, 'VALIDATION', 'Pilih kalender dulu');
-    const r = await cal.calendars.get({ calendarId });
-    return { ok: true, calendar: r.data.summary, timeZone: r.data.timeZone };
+    try {
+      // only calls the granted scopes cover: calendarList (calendarlist.readonly) and events (calendar.events).
+      // calendars.get needs the broader calendar.readonly scope and fails with "insufficient authentication scopes".
+      const r = await cal.calendarList.get({ calendarId });
+      await cal.events.list({ calendarId, maxResults: 1, timeMin: new Date().toISOString() });
+      return { ok: true, calendar: r.data.summaryOverride ?? r.data.summary, timeZone: r.data.timeZone };
+    } catch (e: any) {
+      const status = e?.response?.status ?? e?.status;
+      if (status === 401 || e?.response?.data?.error === 'invalid_grant') {
+        throw new AppError(409, 'GOOGLE_RECONNECT', 'Akses Google kedaluwarsa atau dicabut. Hubungkan ulang Google Calendar.');
+      }
+      if (status === 403 || status === 404) {
+        throw new AppError(409, 'GOOGLE_NO_ACCESS', 'Akun Google tidak punya akses tulis ke kalender ini. Pilih kalender lain atau hubungkan ulang.');
+      }
+      throw new AppError(502, 'GOOGLE_UNAVAILABLE', 'Google Calendar tidak dapat dihubungi. Coba lagi sebentar lagi.');
+    }
   }
 
   // ---------- worker side ----------

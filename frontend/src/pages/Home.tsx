@@ -6,6 +6,7 @@ import { api } from '../api';
 import { useAuth, useIsOwner } from '../App';
 import { BookingCard, BookingRow } from '../BookingCard';
 import { useSettings } from '../hooks';
+import { useCalendarInbox } from './CalendarInbox';
 import { Banner, Button, Empty, Logo, Page, PayBadge, Spinner, cx } from '../ui';
 
 const addDays = (ymd: string, n: number) => wibDate(new Date(fromWib(ymd).getTime() + n * 86400_000));
@@ -102,6 +103,8 @@ export default function Home() {
   const next = active.find((b) => new Date(b.endAt).getTime() > now && b.status === 'CONFIRMED');
   const todayCount = active.filter((b) => wibDate(b.startAt) === today).length;
   const gcal = settings.data?.gcalStatus;
+  const inbox = useCalendarInbox('PENDING', gcal === 'CONNECTED');
+  const inboxCount = inbox.data?.items.length ?? 0;
 
   return (
     <>
@@ -129,6 +132,12 @@ export default function Home() {
         {owner && gcal === 'NOT_CONNECTED' && !tipHidden ? (
           <Banner tone="info" action={<button className="text-sm min-h-11 px-1" onClick={() => { localStorage.setItem('jes-gcal-tip', '1'); setTipHidden(true); }}>Tutup</button>}>
             Tip: <Link to="/admin/integrations" className="underline font-medium">hubungkan Google Calendar</Link> agar setiap booking muncul otomatis di kalender studio.
+          </Banner>
+        ) : null}
+
+        {inboxCount ? (
+          <Banner tone="info" action={<Link to="/calendar-inbox" className="font-semibold underline min-h-11 flex items-center">Tinjau</Link>}>
+            {inboxCount} event baru di Google Calendar belum ada di aplikasi.
           </Banner>
         ) : null}
 

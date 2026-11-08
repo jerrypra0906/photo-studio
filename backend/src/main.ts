@@ -14,11 +14,11 @@ import { BookingsService } from './modules/bookings.service';
 import { DocumentsService } from './modules/documents.service';
 import { FinanceController, RecapService } from './modules/finance.controller';
 import { GoogleService } from './modules/google.service';
-import { HealthController, IntegrationsController } from './modules/integrations.controller';
+import { CalendarInboxController, HealthController, IntegrationsController } from './modules/integrations.controller';
 import { MastersController } from './modules/masters.controller';
 
 @Module({
-  controllers: [AuthController, MastersController, BookingsController, FinanceController, IntegrationsController, HealthController],
+  controllers: [AuthController, MastersController, BookingsController, FinanceController, IntegrationsController, CalendarInboxController, HealthController],
   providers: [
     Db, BookingsService, DocumentsService, RecapService, GoogleService,
     { provide: APP_GUARD, useClass: AuthGuard },

@@ -275,6 +275,15 @@ export class BookingsService {
          input.adjustment, input.adjustmentReason, input.dpAmount, p.pricing.total, input.notes?.trim() || null, p.afterHours, p.backDated, user.id], c);
       await this.writeAddons(c, b.id, p);
       await this.history(c, b.id, user, 'CREATE', null, null, bookingNo, 0);
+      if (input.gcalInboxId) {
+        // made in Google Calendar first: link its event so the sync updates it instead of adding a second one
+        const ev = await this.db.one(`SELECT event_id FROM gcal_inbox WHERE id = $1 AND status = 'PENDING' FOR UPDATE`, [input.gcalInboxId], c);
+        if (!ev) throw conflict('INBOX_DECIDED', 'Event kalender ini sudah diproses atau dihapus di Google Calendar');
+        await c.query(`UPDATE bookings SET gcal_event_id = $2 WHERE id = $1`, [b.id, ev.eventId]);
+        await c.query(`UPDATE gcal_inbox SET status = 'ACCEPTED', booking_id = $2, decided_by = $3, decided_at = now(), updated_at = now() WHERE id = $1`,
+          [input.gcalInboxId, b.id, user.id]);
+        await this.history(c, b.id, user, 'GCAL_LINK', null, null, 'Dari Google Calendar', 0);
+      }
       await enqueueSync(this.db, c, b.id, 'UPSERT');
       if (idemKey) await c.query(`INSERT INTO idempotency_keys (key, user_id, booking_id) VALUES ($1,$2,$3)`, [idemKey, user.id, b.id]);
       return b.id as string;
