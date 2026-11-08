@@ -5,7 +5,8 @@ import { formatRp, longDateId, wibTime } from '@jes/shared';
 import { ApiError, api } from '../api';
 import { useAuth } from '../App';
 import { Addon, BookingType, Category, Photographer, UNIT_LABEL, useAddons, useCategories, usePhotographers, useTypes } from '../hooks';
-import { Banner, Button, Chip, Confirm, Empty, Field, Input, MoneyInput, Page, PageHeader, Sheet, Spinner, Stepper, Toggle, cx } from '../ui';
+import { Banner, Button, Chip, Confirm, Empty, Field, Input, MoneyInput, Page, PageHeader, Sheet, Spinner, Stepper, Toggle, cx, useToast } from '../ui';
+import { PasswordHints, passwordOk } from './Account';
 
 /** S9 Admin home. */
 export function AdminHome() {
@@ -18,7 +19,8 @@ export function AdminHome() {
     ['/admin/settings', 'Pengaturan studio', 'Profil, rekening, jam buka'],
     ['/admin/templates', 'Template WhatsApp', 'Pesan booking, pelunasan, dll.'],
     ['/admin/integrations', 'Google Calendar', 'Sinkron otomatis ke kalender'],
-    ['/admin/users', 'Pengguna', 'Owner dan staf'],
+    ['/admin/users', 'Pengguna', 'Daftarkan, ubah, hapus Owner dan staf'],
+    ['/me', 'Akun saya', 'Ganti nama dan kata sandi'],
   ];
   return (
     <>
@@ -41,11 +43,11 @@ export function AdminHome() {
 
 // ---------- generic list + edit sheet ----------
 function MasterPage<T extends { id: string; active: boolean; inUse?: boolean }>({
-  title, items, loading, render, empty, onNew, editor,
-}: { title: string; items?: T[]; loading: boolean; render: (t: T) => ReactNode; empty: string; onNew: () => void; editor: ReactNode }) {
+  title, items, loading, render, empty, onNew, editor, newLabel = '+ Tambah',
+}: { title: string; items?: T[]; loading: boolean; render: (t: T) => ReactNode; empty: string; onNew: () => void; editor: ReactNode; newLabel?: string }) {
   return (
     <>
-      <PageHeader title={title} back="/admin" action={<button className="text-accent-text font-medium px-2 min-h-11" onClick={onNew}>+ Tambah</button>} />
+      <PageHeader title={title} back="/admin" action={<button className="text-accent-text font-medium px-2 min-h-11" onClick={onNew}>{newLabel}</button>} />
       <Page>
         {loading ? <Spinner /> : !items?.length ? <Empty>{empty}</Empty> : (
           <div className="rounded-3xl border border-line glass divide-y divide-line overflow-hidden">{items.map((t) => <div key={t.id} className={cx(!t.active && 'opacity-60')}>{render(t)}</div>)}</div>
@@ -79,19 +81,19 @@ function useSave(keys: string[]) {
       keys.forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
       return true;
     } catch (e) {
-      if (e instanceof ApiError) { setErrors(e.code === 'DUPLICATE' ? { name: 'Nama sudah ada' } : e.fields); setError(e); }
+      if (e instanceof ApiError) { setErrors(e.code === 'DUPLICATE' && !Object.keys(e.fields).length ? { name: 'Nama sudah ada' } : e.fields); setError(e); }
       return false;
     } finally { setBusy(false); }
   };
-  return { run, errors, error, busy, reset: () => { setErrors({}); setError(null); } };
+  return { run, errors, error, busy, setErrors, reset: () => { setErrors({}); setError(null); } };
 }
 
-function EditorSheet({ open, title, onClose, onSave, onDelete, canDelete, busy, error, children }: {
-  open: boolean; title: string; onClose: () => void; onSave: () => void; onDelete?: () => void; canDelete?: boolean; busy: boolean; error?: ApiError | null; children: ReactNode;
+function EditorSheet({ open, title, onClose, onSave, onDelete, canDelete, busy, error, children, saveDisabled }: {
+  open: boolean; title: string; onClose: () => void; onSave: () => void; onDelete?: () => void; canDelete?: boolean; busy: boolean; error?: ApiError | null; children: ReactNode; saveDisabled?: boolean;
 }) {
   return (
     <Sheet open={open} onClose={onClose} title={title}
-      footer={<div className="flex gap-3">{onDelete && canDelete ? <Button variant="secondary" className="text-bad" onClick={onDelete}>Hapus</Button> : null}<Button className="flex-1" busy={busy} onClick={onSave}>Simpan</Button></div>}>
+      footer={<div className="flex gap-3">{onDelete && canDelete ? <Button variant="secondary" className="text-bad" onClick={onDelete}>Hapus</Button> : null}<Button className="flex-1" busy={busy} disabled={saveDisabled} onClick={onSave}>Simpan</Button></div>}>
       {error && !Object.keys(error.fields).length && error.code !== 'DUPLICATE' && error.code !== 'FUTURE_BOOKINGS' ? <Banner tone="bad">{error.message}</Banner> : null}
       {children}
     </Sheet>
@@ -242,34 +244,89 @@ export function AdminCategories() {
   );
 }
 
-// ---------- users (FR-16 Staff role) ----------
+// ---------- users: register / edit / remove (FR-16) ----------
+interface UserRow { id: string; name: string; email: string; role: 'OWNER' | 'STAFF'; active: boolean; lastLoginAt: string | null; createdAt: string }
+
 export function AdminUsers() {
   const { user: me } = useAuth();
-  const list = useQuery({ queryKey: ['users'], queryFn: () => api.get<any[]>('/users') });
-  const [edit, setEdit] = useState<any | null>(null);
+  const toast = useToast();
+  const qc = useQueryClient();
+  const list = useQuery({ queryKey: ['users'], queryFn: () => api.get<UserRow[]>('/users') });
+  const [edit, setEdit] = useState<(Partial<UserRow> & { password: string; confirm: string }) | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeErr, setRemoveErr] = useState('');
   const s = useSave(['users']);
-  const open = (u?: any) => { s.reset(); setEdit(u ? { ...u, password: '' } : { name: '', email: '', password: '', role: 'STAFF', active: true }); };
+  const owners = (list.data ?? []).filter((u) => u.role === 'OWNER' && u.active);
+  const isSelf = !!edit?.id && edit.id === me?.id;
+  const lastOwner = !!edit?.id && edit.role === 'OWNER' && owners.length <= 1 && owners.some((o) => o.id === edit.id);
+
+  const open = (u?: UserRow) => { s.reset(); setRemoveErr(''); setEdit(u ? { ...u, password: '', confirm: '' } : { name: '', email: '', password: '', confirm: '', role: 'STAFF', active: true }); };
   const save = async () => {
-    const body = { ...edit, password: edit.password || undefined };
-    if (await s.run(() => (edit.id ? api.patch(`/users/${edit.id}`, body) : api.post('/users', body)))) setEdit(null);
+    if (!edit) return;
+    if (edit.password !== edit.confirm) { s.setErrors({ confirm: 'Konfirmasi tidak sama' }); return; }
+    const body = { name: edit.name, email: edit.email, role: edit.role, active: edit.active, password: edit.password || undefined };
+    if (await s.run(() => (edit.id ? api.patch(`/users/${edit.id}`, body) : api.post('/users', body)))) {
+      toast(edit.id ? 'Pengguna diperbarui' : `Akun ${edit.email} dibuat`);
+      setEdit(null);
+    }
   };
+  const remove = async () => {
+    try {
+      await api.del(`/users/${edit!.id}`);
+      qc.invalidateQueries({ queryKey: ['users'] });
+      toast('Pengguna dihapus');
+      setRemoving(false); setEdit(null);
+    } catch (e) { setRemoveErr((e as ApiError).message); setRemoving(false); }
+  };
+  const newPwInvalid = !!edit && (edit.id ? edit.password !== '' && !passwordOk(edit.password, edit.email) : !passwordOk(edit.password, edit.email));
+
   return (
-    <MasterPage title="Pengguna" items={list.data} loading={list.isLoading} empty="Belum ada pengguna." onNew={() => open()}
-      render={(u) => <RowButton onClick={() => open(u)} title={<>{u.name} {!u.active ? <Inactive /> : null}</>} sub={`${u.email} · ${u.role === 'OWNER' ? 'Owner' : 'Staf'}`} />}
+    <MasterPage title="Pengguna" items={list.data} loading={list.isLoading} empty="Belum ada pengguna." onNew={() => open()} newLabel="+ Daftarkan"
+      render={(u) => (
+        <RowButton onClick={() => open(u)}
+          title={<>{u.name}{u.id === me?.id ? <span className="text-muted font-normal"> (Anda)</span> : null} {!u.active ? <Inactive /> : null}</>}
+          sub={`${u.email} · ${u.role === 'OWNER' ? 'Owner' : 'Staf'} · ${u.lastLoginAt ? `terakhir masuk ${longDateId(u.lastLoginAt)}` : 'belum pernah masuk'}`} />
+      )}
       editor={edit ? (
-        <EditorSheet open title={edit.id ? 'Ubah pengguna' : 'Pengguna baru'} onClose={() => setEdit(null)} onSave={save} busy={s.busy} error={s.error}>
-          <Field label="Nama" error={s.errors.name}><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-          <Field label="Email" error={s.errors.email}><Input type="email" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></Field>
-          <Field label={edit.id ? 'Kata sandi baru (kosongkan bila tetap)' : 'Kata sandi'} error={s.errors.password}>
-            <Input type="password" autoComplete="new-password" value={edit.password} onChange={(e) => setEdit({ ...edit, password: e.target.value })} />
-          </Field>
-          <div className="flex gap-2">
-            <Chip active={edit.role === 'STAFF'} disabled={edit.id === me?.id} onClick={() => setEdit({ ...edit, role: 'STAFF' })}>Staf</Chip>
-            <Chip active={edit.role === 'OWNER'} onClick={() => setEdit({ ...edit, role: 'OWNER' })}>Owner</Chip>
-          </div>
-          {edit.id !== me?.id ? <Toggle label="Aktif" checked={edit.active} onChange={(v) => setEdit({ ...edit, active: v })} /> : null}
-          <p className="text-sm text-muted">Staf hanya bisa membuat dan mengirim booking — tanpa Admin, Keuangan, atau penyesuaian harga.</p>
-        </EditorSheet>
+        <>
+          <EditorSheet open={!removing} title={edit.id ? 'Ubah pengguna' : 'Daftarkan pengguna'} onClose={() => setEdit(null)} onSave={save} busy={s.busy} error={s.error}
+            saveDisabled={newPwInvalid || !edit.name?.trim() || !edit.email?.trim()}
+            canDelete={!!edit.id && !isSelf && !lastOwner} onDelete={() => { setRemoveErr(''); setRemoving(true); }}>
+            {removeErr ? <Banner tone="bad">{removeErr}</Banner> : null}
+            <Field label="Nama" error={s.errors.name}><Input value={edit.name} maxLength={60} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
+            <Field label="Email (untuk masuk)" error={s.errors.email}><Input type="email" autoComplete="off" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></Field>
+            <Field label="Peran">
+              <div className="flex gap-2">
+                <Chip active={edit.role === 'STAFF'} disabled={isSelf || lastOwner} onClick={() => setEdit({ ...edit, role: 'STAFF' })}>Staf</Chip>
+                <Chip active={edit.role === 'OWNER'} onClick={() => setEdit({ ...edit, role: 'OWNER' })}>Owner</Chip>
+              </div>
+            </Field>
+            <p className="text-sm text-muted">{edit.role === 'OWNER' ? 'Owner punya akses penuh: Admin, Keuangan, dan semua booking.' : 'Staf hanya bisa membuat dan mengirim booking — tanpa Admin, Keuangan, atau penyesuaian harga.'}</p>
+            <Field label={edit.id ? 'Atur ulang kata sandi (opsional)' : 'Kata sandi awal'} error={s.errors.password}>
+              <Input type="password" autoComplete="new-password" value={edit.password} onChange={(e) => setEdit({ ...edit, password: e.target.value })} />
+            </Field>
+            {edit.password || !edit.id ? (
+              <>
+                <PasswordHints value={edit.password} email={edit.email} />
+                <Field label="Ulangi kata sandi" error={s.errors.confirm}>
+                  <Input type="password" autoComplete="new-password" value={edit.confirm} onChange={(e) => setEdit({ ...edit, confirm: e.target.value })} />
+                </Field>
+              </>
+            ) : null}
+            {edit.id && !isSelf ? <Toggle label="Aktif (boleh masuk)" checked={!!edit.active} onChange={(v) => setEdit({ ...edit, active: v })} /> : null}
+            {edit.id ? (
+              <p className="text-xs text-muted">
+                {isSelf ? 'Ini akun Anda — ganti kata sandi sendiri di Akun saya. ' : ''}
+                {lastOwner ? 'Owner terakhir tidak bisa diturunkan, dinonaktifkan atau dihapus. ' : ''}
+                Menonaktifkan, mengganti peran atau mengatur ulang kata sandi langsung mengeluarkan pengguna dari semua perangkat.
+              </p>
+            ) : <p className="text-xs text-muted">Bagikan email dan kata sandi awal secara langsung; pengguna bisa menggantinya di Akun saya.</p>}
+          </EditorSheet>
+          <Confirm open={removing} title={`Hapus ${edit.name}?`} confirmLabel="Hapus pengguna" tone="danger" onClose={() => setRemoving(false)} onConfirm={remove}>
+            <p>{edit.email} tidak bisa masuk lagi dan langsung dikeluarkan dari semua perangkat.</p>
+            <p className="text-sm text-muted">Booking dan riwayat yang pernah dibuat tetap menyimpan namanya. Email ini bisa didaftarkan lagi nanti.</p>
+          </Confirm>
+        </>
       ) : null} />
   );
 }

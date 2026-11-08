@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { writeFileSync } from 'node:fs';
 import { Client } from 'pg';
 import { wibMonth } from '@jes/shared';
 import { config } from './config';
@@ -64,13 +65,28 @@ async function main() {
     await new Promise((res) => setTimeout(res, 2000));
   }
   await listen();
-  setInterval(() => void drain(), 15_000);
-  setInterval(() => void recurringDrafts().catch((e) => console.error(e)), 3600_000);
-  setInterval(() => void housekeeping().catch((e) => console.error(e)), 3600_000);
+  // heartbeat for the container healthcheck: the sweep loop is alive
+  const beat = () => { try { writeFileSync('/tmp/worker-heartbeat', String(Date.now())); } catch { /* read-only fs without tmpfs */ } };
+  beat();
+  timers.push(setInterval(() => { beat(); void drain(); }, 15_000));
+  timers.push(setInterval(() => void recurringDrafts().catch((e) => console.error(e)), 3600_000));
+  timers.push(setInterval(() => void housekeeping().catch((e) => console.error(e)), 3600_000));
   await housekeeping().catch((e) => console.error(e));
   await recurringDrafts().catch((e) => console.error(e));
   await drain();
 }
+
+const timers: NodeJS.Timeout[] = [];
+/** Graceful stop on deploy: finish the job in hand, close DB connections, exit before Docker's kill timeout. */
+async function shutdown(signal: string) {
+  console.log(`worker: ${signal}, stopping`);
+  timers.forEach(clearInterval);
+  for (let i = 0; i < 20 && draining; i++) await new Promise((r) => setTimeout(r, 500));
+  await pool.end().catch(() => undefined);
+  process.exit(0);
+}
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
 
 main().catch((e) => {
   console.error(e);

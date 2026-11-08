@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { createHash } from 'node:crypto';
 import { verifyAccess } from './http';
 
 /**
@@ -10,6 +11,8 @@ const PER_USER = Number(process.env.RATE_LIMIT_PER_MIN ?? 120);
 const PER_IP_ANON = Number(process.env.RATE_LIMIT_ANON_PER_MIN ?? 60);
 // login attempts per IP per minute, checked in memory so a parallel burst can't race the DB throttle (SEC-F7)
 const LOGIN_PER_IP = Number(process.env.RATE_LIMIT_LOGIN_PER_MIN ?? 10);
+// refresh/logout are keyed per session (refresh cookie), so many phones behind one studio NAT don't share a bucket
+const REFRESH_PER_SESSION = Number(process.env.RATE_LIMIT_REFRESH_PER_MIN ?? 30);
 const WINDOW_MS = 60_000;
 const hits = new Map<string, { n: number; reset: number }>();
 
@@ -22,7 +25,10 @@ export function rateLimit(req: Request, res: Response, next: NextFunction) {
   if (/\/(health|ready)$/.test(req.path)) return next();
   const p = verifyAccess(req.headers.authorization);
   const login = req.method === 'POST' && req.path.endsWith('/auth/login');
-  const [key, limit] = login ? [`login:${req.ip}`, LOGIN_PER_IP] : p ? [`u:${p.sub}`, PER_USER] : [`ip:${req.ip}`, PER_IP_ANON];
+  const rt = /\/auth\/(refresh|logout)$/.test(req.path) ? /(?:^|;\s*)jes_rt=([^;]+)/.exec(req.headers.cookie ?? '')?.[1] : undefined;
+  const [key, limit] = login ? [`login:${req.ip}`, LOGIN_PER_IP]
+    : rt ? [`rt:${createHash('sha256').update(rt).digest('base64url').slice(0, 22)}`, REFRESH_PER_SESSION]
+    : p ? [`u:${p.sub}`, PER_USER] : [`ip:${req.ip}`, PER_IP_ANON];
   const now = Date.now();
   let h = hits.get(key);
   if (!h || h.reset <= now) {

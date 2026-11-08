@@ -12,6 +12,7 @@ import BookingForm from './pages/BookingForm';
 import BookingDetail from './pages/BookingDetail';
 import Finance from './pages/Finance';
 import Dashboard from './pages/Dashboard';
+import Account from './pages/Account';
 import ExpenseForm from './pages/ExpenseForm';
 import Recap from './pages/Recap';
 import { AdminHome, AdminTypes, AdminPhotographers, AdminAddons, AdminCategories, AdminUsers } from './pages/AdminMasters';
@@ -117,20 +118,6 @@ function OwnerOnly() {
   return <Outlet />;
 }
 
-function Me() {
-  const { user, logout } = useAuth();
-  return (
-    <>
-      <PageHeader title="Akun" />
-      <Page>
-        <p className="font-medium">{user?.name}</p>
-        <p className="text-muted">{user?.email} · {user?.role === 'OWNER' ? 'Owner' : 'Staf'}</p>
-        <Button variant="secondary" className="w-full" onClick={logout}>Keluar</Button>
-      </Page>
-    </>
-  );
-}
-
 export default function App() {
   return (
     <QueryClientProvider client={qc}>
@@ -146,7 +133,7 @@ export default function App() {
                 <Route path="bookings/new" element={<BookingForm />} />
                 <Route path="bookings/:id" element={<BookingDetail />} />
                 <Route path="bookings/:id/edit" element={<BookingForm />} />
-                <Route path="me" element={<Me />} />
+                <Route path="me" element={<Account />} />
                 <Route element={<OwnerOnly />}>
                   <Route path="finance" element={<Dashboard />} />
                   <Route path="finance/expenses" element={<Finance />} />

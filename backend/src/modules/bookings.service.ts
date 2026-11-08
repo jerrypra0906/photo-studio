@@ -41,7 +41,8 @@ export class BookingsService {
     const add = (sql: string, v: unknown) => { p.push(v); where.push(sql.replace('?', `$${p.length}`)); };
     if (q.q) {
       const s = `%${q.q.trim()}%`;
-      const digits = q.q.replace(/\D/g, '');
+      // phone search only when the query looks like a number, so "Lilin 2026" doesn't match phones containing 2026
+      const digits = /^[\d\s+\-().]+$/.test(q.q.trim()) ? q.q.replace(/\D/g, '') : '';
       p.push(s);
       const i = p.length;
       let cond = `(b.client_name_snap ILIKE $${i} OR b.booking_no ILIKE $${i}`;
@@ -91,7 +92,7 @@ export class BookingsService {
 
   async clients(q: string) {
     if (!q || q.trim().length < 2) return [];
-    const digits = q.replace(/\D/g, '').replace(/^0/, '');
+    const digits = /^[\d\s+\-().]+$/.test(q.trim()) ? q.replace(/\D/g, '').replace(/^0/, '') : '';
     return this.db.many(
       `SELECT id, name, phone_e164, last_booking_at FROM clients
         WHERE name ILIKE $1 ${digits.length >= 3 ? 'OR phone_e164 LIKE $2' : ''}

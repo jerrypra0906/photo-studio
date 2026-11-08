@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useCallback, useContext, useEffect, useState, InputHTMLAttributes, ButtonHTMLAttributes, forwardRef } from 'react';
+import { ReactNode, ReactElement, Children, cloneElement, isValidElement, createContext, useCallback, useContext, useEffect, useId, useState, InputHTMLAttributes, ButtonHTMLAttributes, forwardRef } from 'react';
 import { Link } from 'react-router';
 import { formatRp, formatThousands, parseAmount } from '@jes/shared';
 
@@ -33,12 +33,22 @@ export function Button({ variant = 'primary', className, busy, children, ...p }:
 }
 
 // ---------- form fields ----------
+/**
+ * Label + control + error/hint. When the only child is a form control without an id, it gets one, so the
+ * label is always programmatically attached (NFR-07) and the error is announced via aria-describedby.
+ */
 export function Field({ label, error, hint, children, htmlFor }: { label: string; error?: string; hint?: ReactNode; children: ReactNode; htmlFor?: string }) {
+  const auto = useId();
+  const only = Children.count(children) === 1 && isValidElement(children) ? (children as ReactElement<any>) : null;
+  const isControl = !!only && (typeof only.type === 'string' ? ['input', 'textarea', 'select'].includes(only.type) : only.type === Input || only.type === MoneyInput);
+  const id = htmlFor ?? (isControl ? only!.props.id ?? auto : undefined);
+  const msgId = error || hint ? `${id ?? auto}-msg` : undefined;
+  const control = isControl ? cloneElement(only!, { id, 'aria-describedby': msgId }) : children;
   return (
     <div className="space-y-1">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-muted">{label}</label>
-      {children}
-      {error ? <p className="text-sm text-bad" role="alert">{error}</p> : hint ? <p className="text-sm text-muted">{hint}</p> : null}
+      <label htmlFor={id} className="block text-sm font-medium text-muted">{label}</label>
+      {control}
+      {error ? <p id={msgId} className="text-sm text-bad" role="alert">{error}</p> : hint ? <p id={msgId} className="text-sm text-muted">{hint}</p> : null}
     </div>
   );
 }

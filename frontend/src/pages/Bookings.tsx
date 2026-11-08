@@ -5,7 +5,7 @@ import { fromWib, monthLabelId, shiftMonth, wibDate, wibMonth } from '@jes/share
 import { api } from '../api';
 import { BookingCard, BookingRow } from '../BookingCard';
 import { useTypes } from '../hooks';
-import { Chip, Empty, Input, Page, PageHeader, Spinner } from '../ui';
+import { Banner, Chip, Empty, Input, Page, PageHeader, Spinner } from '../ui';
 
 const STATUSES: [string, string][] = [['', 'Aktif'], ['CONFIRMED', 'Terkonfirmasi'], ['COMPLETED', 'Selesai'], ['CANCELLED', 'Dibatalkan']];
 
@@ -54,7 +54,9 @@ export default function Bookings() {
           <Chip active={!month} onClick={() => set('month', '')}>Semua bulan</Chip>
           {[1, 0, -1, -2].map((d) => { const m = shiftMonth(thisMonth, d); return <Chip key={m} active={month === m} onClick={() => set('month', m)}>{monthLabelId(m)}</Chip>; })}
         </div>
-        {list.isLoading ? <Spinner /> : list.data?.length ? (
+        {list.isLoading ? <Spinner /> : list.isError ? (
+          <Banner tone="bad" action={<button className="underline font-medium min-h-11" onClick={() => list.refetch()}>Coba lagi</button>}>{(list.error as Error).message}</Banner>
+        ) : list.data?.length ? (
           <div className="space-y-2">
             <p className="text-sm text-muted">{list.data.length} booking</p>
             {list.data.map((b) => <BookingCard key={b.id} b={b} showDate />)}

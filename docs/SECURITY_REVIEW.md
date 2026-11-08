@@ -205,3 +205,29 @@ The first attempt to force multer 2.5.0 meant hand-editing `package-lock.json`. 
 - All traffic from one network shares the per-IP login limits. An office NAT would therefore lock logins for 10 minutes after 20 failed attempts, which is unlikely in normal use. The test suites reset the throttle at start (`DELETE FROM login_attempts`).
 - If the API is ever scaled to more than one replica (TD §3.2 proposes two), move the rate-limit counters to a shared store first.
 - For production: set `COOKIE_SECURE=true` behind TLS, add HSTS on the TLS server block, and keep `migrate` as a separate step in the CI/CD deploy (TD §3.3).
+
+## 7. Round 2: before the GCP deployment (8 Nov 2026)
+
+**Scope:** the new user management (register, edit, remove, self-service), the session layer under shared NAT, and the production surface (TLS edge, proxy chain, containers, exposed ports).
+
+**Result:** application pen test **63/63 defended** ([`security.mjs`](../backend/test/security.mjs): the original 56 plus 7 new user and session attacks). Production surface **22/22** ([`prod-check.mjs`](../backend/test/prod-check.mjs): TLS, HSTS, forged client IP, file exposure, closed ports, TRACE, container privileges).
+
+### Findings fixed in round 2
+
+| ID | Sev. | Finding | Fix | Test |
+|---|---|---|---|---|
+| R2-1 | Medium | Session refresh shared the anonymous per-IP rate-limit bucket. Phones behind one studio Wi-Fi (NAT) could exhaust it and **sign each other out**, and the client treated a 429 as a logout. Found by the E2E suite. | Refresh/logout are throttled per session (SHA-256 of the refresh cookie, 30/min). The client honours `Retry-After` and keeps the session. | SEC-U7, E2E (48/48 from one IP) |
+| R2-2 | Medium | The last-Owner guard counted Owners without locking them. Two Owners demoting each other at once could both succeed and **leave no Owner** (nobody could reach Admin or Finance). A naive lock fix would risk deadlocks. | One statement locks the target and all active Owners in id order (`FOR UPDATE`), then checks. | USER-16 (concurrent demotions: one succeeds, no 500, Owner remains) |
+| R2-3 | Low | Password policy was length ≥ 8 only (SEC-A15). | At least 10 characters with a letter and a digit, not equal to the email. Enforced on registration, on Owner resets and on self-service changes. Live hints in the UI. | USER-02, SEC-U4 |
+| R2-4 | Low | No audit of user or admin changes (SEC-G9). | `admin_audit` (actor, action, target, detail), **append-only** for the app's DB role. User create, update and delete, profile updates and password changes are logged. | USER-15, SEC-U6 |
+| R2-5 | High (prod) | No TLS, and a second proxy would have made every user share one IP (ARCH-01, ARCH-06). | Caddy TLS edge, HSTS, `TRUST_PROXY=2`, and any client-supplied `X-Forwarded-For` is replaced. | ARCH-01a–e, ARCH-06a |
+| R2-6 | Medium (prod) | Writable container filesystems, default capabilities, and internal ports at risk of exposure (ARCH-12, ARCH-14). | Read-only root, `cap_drop: ALL`, `no-new-privileges`; only the edge publishes 80/443; firewall with SSH through IAP only. | ARCH-12, ARCH-PORTS, PEN-02 |
+
+### Security properties of the new user management
+
+- **No public sign-up.** Only an Owner can create accounts, so an internet-facing server can't be joined by strangers.
+- **Remove is a soft delete.** The login disappears, active sessions are revoked, and the access token stops working **immediately**: the guard re-checks the account every request, with a 5-second cache that is cleared on change. Bookings and audit rows keep the author's name. The email can be registered again.
+- **Role changes, deactivation and password resets end the user's sessions.** A self-service password change ends every other device and keeps the current one.
+- **Changing your own password needs the current one**, and 5 wrong tries lock it for 10 minutes.
+- **The Owner can't demote, deactivate or remove their own account**, and the last active Owner is protected even when two Owners act at the same moment.
+- **Mass assignment is blocked.** `role`, `email`, `id`, `passwordHash` and `deletedAt` in request bodies are ignored or rejected.

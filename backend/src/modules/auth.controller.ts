@@ -1,12 +1,13 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Patch, Post, Req, Res } from '@nestjs/common';
 import argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
-import { loginSchema } from '@jes/shared';
-import { AppError, AuthUser, Body$, CurrentUser, Public, signAccess } from '../common/http';
+import { loginSchema, passwordChangeInput, profileInput } from '@jes/shared';
+import { AppError, AuthUser, Body$, CurrentUser, Public, badRequest, forgetUser, signAccess } from '../common/http';
 import { randomToken, sha256 } from '../common/crypto';
 import { config } from '../config';
 import { Db } from '../db';
+import { audit } from './masters.controller';
 
 const COOKIE = 'jes_rt';
 const REFRESH_DAYS = 30;
@@ -41,13 +42,14 @@ export class AuthController {
         throw new AppError(429, 'LOCKED', `Terlalu banyak percobaan. Coba lagi setelah ${until.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB`, { retryAt: until });
       }
     }
-    const u = await this.db.one(`SELECT id, name, email, role, password_hash FROM users WHERE email = $1 AND active`, [body.email]);
+    const u = await this.db.one(`SELECT id, name, email, role, password_hash FROM users WHERE email = $1 AND active AND deleted_at IS NULL`, [body.email]);
     const ok = u ? await argon2.verify(u.passwordHash, body.password) : (await argon2.hash('x'), false);
     if (!u || !ok) {
       await this.db.many(`INSERT INTO login_attempts(key) VALUES ($1)`, [key]);
       throw new AppError(401, 'BAD_CREDENTIALS', 'Email atau kata sandi salah');
     }
     await this.db.many(`DELETE FROM login_attempts WHERE key = $1`, [key]);
+    await this.db.many(`UPDATE users SET last_login_at = now() WHERE id = $1`, [u.id]);
     const user: AuthUser = { id: u.id, name: u.name, email: u.email, role: u.role };
     await this.issueRefresh(res, user.id, randomUUID());
     return { accessToken: signAccess(user), user };
@@ -61,7 +63,7 @@ export class AuthController {
     const raw = req.cookies?.[COOKIE];
     if (!raw) throw new AppError(401, 'UNAUTHENTICATED', 'Silakan masuk');
     const t = await this.db.one(
-      `SELECT rt.id, rt.family_id, rt.revoked_at, rt.rotated_at, rt.expires_at, u.id AS user_id, u.name, u.email, u.role, u.active
+      `SELECT rt.id, rt.family_id, rt.revoked_at, rt.rotated_at, rt.expires_at, u.id AS user_id, u.name, u.email, u.role, u.active AND u.deleted_at IS NULL AS active
          FROM refresh_tokens rt JOIN users u ON u.id = rt.user_id WHERE rt.token_hash = $1`, [sha256(raw)]);
     if (!t || !t.active || t.expiresAt < new Date()) {
       res.clearCookie(COOKIE, { path: '/api/v1/auth' });
@@ -91,6 +93,48 @@ export class AuthController {
         [sha256(raw)]);
     }
     res.clearCookie(COOKIE, { path: '/api/v1/auth' });
+  }
+
+  /** Self-service: change own display name (any role; role and email stay Owner-managed). */
+  @Patch('me')
+  async updateMe(@Body(Body$(profileInput)) b: { name: string }, @CurrentUser() me: AuthUser, @Res({ passthrough: true }) res: Response) {
+    const u = await this.db.tx(async (c) => {
+      const r = await this.db.one(`UPDATE users SET name = $2, updated_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, email, role`, [me.id, b.name], c);
+      await audit(c, me, 'PROFILE_UPDATE', 'user', me.id, { name: b.name });
+      return r;
+    });
+    const user: AuthUser = { id: u.id, name: u.name, email: u.email, role: u.role };
+    res.setHeader('Cache-Control', 'no-store');
+    return { accessToken: signAccess(user), user };
+  }
+
+  /**
+   * Self-service password change: needs the current password (5 wrong tries / 10 min → locked),
+   * ends every other session and returns a fresh one for this device.
+   */
+  @Post('password')
+  @HttpCode(200)
+  async changePassword(@Body(Body$(passwordChangeInput)) b: { currentPassword: string; newPassword: string }, @CurrentUser() me: AuthUser, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const key = `${req.ip}|pwchange:${me.id}`;
+    const fails = await this.db.one(`SELECT count(*)::int AS n FROM login_attempts WHERE key = $1 AND at > now() - interval '10 minutes'`, [key]);
+    if (fails.n >= 5) throw new AppError(429, 'LOCKED', 'Terlalu banyak percobaan. Coba lagi dalam 10 menit');
+    const u = await this.db.one(`SELECT id, name, email, role, password_hash FROM users WHERE id = $1 AND active AND deleted_at IS NULL`, [me.id]);
+    if (!u || !(await argon2.verify(u.passwordHash, b.currentPassword))) {
+      await this.db.many(`INSERT INTO login_attempts(key) VALUES ($1)`, [key]);
+      throw badRequest('Kata sandi saat ini salah', { currentPassword: 'Kata sandi saat ini salah' });
+    }
+    if (b.newPassword.toLowerCase() === u.email) throw badRequest('Kata sandi tidak boleh sama dengan email', { newPassword: 'Kata sandi tidak boleh sama dengan email' });
+    const hash = await argon2.hash(b.newPassword, { type: argon2.argon2id });
+    await this.db.tx(async (c) => {
+      await c.query(`UPDATE users SET password_hash = $2, password_changed_at = now(), updated_at = now() WHERE id = $1`, [me.id, hash]);
+      await c.query(`UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [me.id]);
+      await c.query(`DELETE FROM login_attempts WHERE key = $1`, [key]);
+      await audit(c, me, 'PASSWORD_CHANGE', 'user', me.id);
+    });
+    forgetUser(me.id);
+    const user: AuthUser = { id: u.id, name: u.name, email: u.email, role: u.role };
+    await this.issueRefresh(res, user.id, randomUUID());
+    return { accessToken: signAccess(user), user };
   }
 
   @Get('me')

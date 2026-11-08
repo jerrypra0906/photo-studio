@@ -134,12 +134,28 @@ export const templateInput = z.object({
   body: z.string().min(1).max(4000),
 });
 
+/** ≥ 10 characters with at least one letter and one digit (pen-test SEC-A15). */
+export const passwordRule = z.string()
+  .min(10, 'Minimal 10 karakter')
+  .max(200, 'Maksimal 200 karakter')
+  .regex(/[A-Za-z]/, 'Harus mengandung huruf')
+  .regex(/\d/, 'Harus mengandung angka');
+
 export const userInput = z.object({
-  name: z.string().trim().min(1).max(60),
-  email: z.string().email().max(120),
-  password: z.string().min(8, 'Minimal 8 karakter').max(200).optional(),
+  name: z.string().trim().min(2, 'Nama minimal 2 karakter').max(60),
+  email: z.string().trim().toLowerCase().email('Email tidak valid').max(120),
+  password: passwordRule.optional(),
   role: z.enum(ROLES),
   active: z.boolean().default(true),
+}).refine((u) => !u.password || u.password.toLowerCase() !== u.email, { path: ['password'], message: 'Kata sandi tidak boleh sama dengan email' });
+
+export const profileInput = z.object({
+  name: z.string().trim().min(2, 'Nama minimal 2 karakter').max(60),
 });
+
+export const passwordChangeInput = z.object({
+  currentPassword: z.string().min(1, 'Masukkan kata sandi saat ini').max(200),
+  newPassword: passwordRule,
+}).refine((p) => p.currentPassword !== p.newPassword, { path: ['newPassword'], message: 'Kata sandi baru harus berbeda' });
 
 export const reopenInput = z.object({ reason: z.string().trim().min(3, 'Alasan wajib diisi').max(200) });

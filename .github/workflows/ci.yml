@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # shared → backend → frontend (tsc type-checks each workspace, then Vite builds the PWA)
+      - run: npm run build
+      - run: npm test
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Docker images build
+        run: |
+          docker build -f infra/api.Dockerfile -t jes-api:ci .
+          docker build -f infra/web.Dockerfile -t jes-web:ci .

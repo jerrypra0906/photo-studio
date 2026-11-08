@@ -6,7 +6,24 @@ import {
   settingsInput, unknownPlaceholders, userInput,
 } from '@jes/shared';
 import { AuthUser, Body$, CurrentUser, OwnerOnly, badRequest, conflict, forgetUser, notFound } from '../common/http';
-import { Db } from '../db';
+import { Db, Queryable } from '../db';
+
+/** Append-only admin audit row (who did what to which record). */
+export function audit(c: Queryable, actor: AuthUser, action: string, targetType: string, targetId: string | null, detail: Record<string, unknown> = {}) {
+  return c.query(`INSERT INTO admin_audit (actor_id, action, target_type, target_id, detail) VALUES ($1,$2,$3,$4,$5)`, [actor.id, action, targetType, targetId, detail]);
+}
+
+/** The studio must always keep at least one active Owner (else nobody can reach Admin or Finance). */
+/** One statement, id order: locks the target and every active Owner, so concurrent edits can't deadlock or race the guard. */
+function lockUsers(c: Queryable, targetId: string) {
+  return c.query(`SELECT id FROM users WHERE id = $1 OR (role = 'OWNER' AND active AND deleted_at IS NULL) ORDER BY id FOR UPDATE`, [targetId]);
+}
+
+async function assertAnotherOwner(db: Db, c: Queryable, exceptId: string) {
+  // lock every active Owner row so two Owners demoting each other at once can't both succeed
+  const owners = await db.many(`SELECT id FROM users WHERE role = 'OWNER' AND active AND deleted_at IS NULL ORDER BY id FOR UPDATE`, [], c);
+  if (!owners.some((o) => o.id !== exceptId)) throw conflict('LAST_OWNER', 'Harus ada minimal satu Owner aktif');
+}
 
 const Id = new ParseUUIDPipe();
 
@@ -158,30 +175,67 @@ export class MastersController {
     await this.db.many(`DELETE FROM expense_categories WHERE id=$1`, [id]);
   }
 
-  // ---------- users (Staff role, FR-16) ----------
+  // ---------- users: register / edit / remove (FR-16) ----------
   @OwnerOnly() @Get('users')
   users() {
-    return this.db.many(`SELECT id, name, email, role, active, created_at FROM users ORDER BY role, name`);
+    return this.db.many(
+      `SELECT id, name, email, role, active, created_at, last_login_at, password_changed_at
+         FROM users WHERE deleted_at IS NULL ORDER BY active DESC, role, name`);
   }
 
+  /** Register a new Owner or Staff account. There is no public sign-up: only an Owner creates logins. */
   @OwnerOnly() @Post('users')
-  async createUser(@Body(Body$(userInput)) b: z.infer<typeof userInput>) {
+  async createUser(@Body(Body$(userInput)) b: z.infer<typeof userInput>, @CurrentUser() me: AuthUser) {
     if (!b.password) throw badRequest('Kata sandi wajib diisi', { password: 'Kata sandi wajib diisi' });
-    return this.db.one(
-      `INSERT INTO users (name, email, password_hash, role, active) VALUES ($1,$2,$3,$4,$5) RETURNING id, name, email, role, active`,
-      [b.name, b.email, await argon2.hash(b.password, { type: argon2.argon2id }), b.role, b.active]);
+    const hash = await argon2.hash(b.password, { type: argon2.argon2id });
+    return this.db.tx(async (c) => {
+      const u = await this.db.one(
+        `INSERT INTO users (name, email, password_hash, role, active, password_changed_at) VALUES ($1,$2,$3,$4,$5, now())
+         RETURNING id, name, email, role, active, created_at, last_login_at`,
+        [b.name, b.email, hash, b.role, b.active], c);
+      await audit(c, me, 'USER_CREATE', 'user', u.id, { email: u.email, role: u.role, active: u.active });
+      return u;
+    });
   }
 
   @OwnerOnly() @Patch('users/:id')
   async updateUser(@Param('id', Id) id: string, @Body(Body$(userInput)) b: z.infer<typeof userInput>, @CurrentUser() me: AuthUser) {
     if (id === me.id && (!b.active || b.role !== 'OWNER')) throw badRequest('Tidak bisa menonaktifkan atau menurunkan akun sendiri');
     const hash = b.password ? await argon2.hash(b.password, { type: argon2.argon2id }) : null;
-    const r = await this.db.one(
-      `UPDATE users SET name=$2, email=$3, role=$4, active=$5, password_hash=coalesce($6, password_hash), updated_at=now()
-        WHERE id=$1 RETURNING id, name, email, role, active`, [id, b.name, b.email, b.role, b.active, hash]);
-    if (r && (!b.active || hash)) await this.db.many(`UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`, [id]);
+    const r = await this.db.tx(async (c) => {
+      await lockUsers(c, id);
+      const before = await this.db.one(`SELECT id, name, email, role, active FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, [id], c);
+      if (!before) throw notFound('Pengguna');
+      if (before.role === 'OWNER' && before.active && (b.role !== 'OWNER' || !b.active)) await assertAnotherOwner(this.db, c, id);
+      const after = await this.db.one(
+        `UPDATE users SET name=$2, email=$3, role=$4, active=$5, password_hash=coalesce($6, password_hash),
+                password_changed_at = CASE WHEN $6::text IS NULL THEN password_changed_at ELSE now() END, updated_at=now()
+          WHERE id=$1 RETURNING id, name, email, role, active, created_at, last_login_at`,
+        [id, b.name, b.email, b.role, b.active, hash], c);
+      const changed = (['name', 'email', 'role', 'active'] as const).filter((k) => before[k] !== after[k]);
+      await audit(c, me, 'USER_UPDATE', 'user', id, { changed, ...(hash ? { passwordReset: true } : {}), role: after.role, active: after.active });
+      // a role change, deactivation or password reset ends the user's existing sessions
+      if (!b.active || hash || before.role !== after.role) await c.query(`UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`, [id]);
+      return after;
+    });
     forgetUser(id);
-    return r ?? Promise.reject(notFound('Pengguna'));
+    return r;
+  }
+
+  /** Remove = soft delete: the login disappears, bookings and audit rows keep their author. */
+  @OwnerOnly() @Delete('users/:id') @HttpCode(204)
+  async deleteUser(@Param('id', Id) id: string, @CurrentUser() me: AuthUser) {
+    if (id === me.id) throw badRequest('Tidak bisa menghapus akun sendiri');
+    await this.db.tx(async (c) => {
+      await lockUsers(c, id);
+      const u = await this.db.one(`SELECT id, email, role, active FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, [id], c);
+      if (!u) throw notFound('Pengguna');
+      if (u.role === 'OWNER' && u.active) await assertAnotherOwner(this.db, c, id);
+      await c.query(`UPDATE users SET deleted_at = now(), active = false, updated_at = now() WHERE id = $1`, [id]);
+      await c.query(`UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [id]);
+      await audit(c, me, 'USER_DELETE', 'user', id, { email: u.email, role: u.role });
+    });
+    forgetUser(id);
   }
 
   // ---------- settings (L2-3.4) ----------

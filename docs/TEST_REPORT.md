@@ -7,6 +7,48 @@
 | Suite | [`backend/test/functional.mjs`](../backend/test/functional.mjs), raw results in [`test-results/functional.json`](test-results/functional.json) |
 | Re-run | `node backend/test/functional.mjs` (creates data, so use a dev database only; it cleans up after itself) |
 
+## Round 2: before the GCP deployment (8 Nov 2026)
+
+| Suite | What it drives | Cases | Result |
+|---|---|---:|---|
+| Pricing unit tests (`npm test`) | `shared/pricing` | 7 | **7 pass** |
+| API smoke (`backend/test/smoke.mjs`) | REST API through nginx | 23 | **23 pass** |
+| Backend functional (`backend/test/functional.mjs`) | every user story ±, dashboard, **user management** | 169 | **160 pass, 0 fail**, 9 need Google OAuth |
+| Frontend E2E (`frontend`: `npx playwright test`) | real UI in mobile Chromium (Pixel 7) | 48 | **48 pass** |
+
+**Frontend E2E coverage** ([`frontend/e2e`](../frontend/e2e)):
+
+- **Login and session:** wrong password, empty form, redirect when signed out, reload keeps you signed in, logout, show/hide password, Staff navigation.
+- **New booking:** Save disabled until the form is valid, inline phone error, live total and balance, booking number on save, a taken slot hidden and a manual clash named.
+- **Booking detail:** WhatsApp message and `wa.me` link, invoice download, edit creates R1, cancel without and with a reason, completing a past session.
+- **Schedule:** tapping an empty slot opens a pre-filled form; search finds and misses as expected.
+- **Dashboard:** hero figure, charts, month tooltip, table view, period and basis switches.
+- **Expenses and recap:** validation, Rp formatting, create and delete, CSV download.
+- **Admin:** duplicate name, invalid opening hours, unknown template placeholder.
+- **Users:** register with password hints, mismatched confirmation, duplicate email, edit and promote, protections on your own account, remove.
+- **Account:** wrong current password, successful change, rename.
+- **Staff restrictions:** 6 Owner-only URLs blocked, no adjustment field, no past dates, no "Tandai selesai".
+- **Layout:** no horizontal scroll at 360 px and 430 px; dark mode.
+
+**User-management cases** (USER-01 to USER-16): register; weak password rules; duplicate email in any letter case; edit and promote (sessions end); Owner password reset; deactivate and reactivate; protections on your own account; remove (immediate effect, history keeps the name); re-register a removed email; unknown and invalid ids; Staff refused on all user endpoints; self-service rename (no role escalation); password-change rejections and lockout; a successful change signs out other devices; audit rows; concurrent Owner demotions.
+
+### Findings from functional testing (all fixed and re-tested)
+
+| # | Found by | Finding | Fix |
+|---|---|---|---|
+| F-1 | E2E | Several page loads from one IP (e.g. a studio Wi-Fi) hit the anonymous rate limit on `/auth/refresh`, and **the app signed the user out**. | Refresh is limited per session; the client waits for `Retry-After` instead of logging out. |
+| F-2 | E2E | Admin and template form labels weren't connected to their inputs, so screen readers announced unnamed fields (NFR-07). | `Field` now ties its label (and error message) to the control automatically, across every form. |
+| F-3 | Backend | Two Owners demoting each other at once could leave no Owner. | Ordered row locking in a single statement. |
+| F-4 | E2E (console) | The CSP blocked fonts that Vite had inlined as `data:` URIs, so some text used a fallback font. | Fonts are never inlined. |
+| F-5 | E2E | Settings errors were shown twice (in the field and in a toast). | Kept on purpose (the toast confirms the failed save); the test was adjusted. |
+| F-6 | E2E | Search pulled the digits out of *any* query and matched them against phone numbers, so "Lilin 2026" could match a phone containing 2026. | Phone matching only for phone-shaped queries, in booking search and client suggestions (EDGE-12a). |
+| F-7 | E2E | The booking list showed a blank page when the request failed. | Error banner with "Coba lagi". |
+
+Re-run everything: `npm test`, `node backend/test/smoke.mjs`, `node backend/test/functional.mjs`, `(cd frontend && npx playwright test)`. Leave about a minute between suites. They all sign in as the same Owner from one machine, so running them back to back can trip the production rate limits (120 requests per minute per user, 10 logins per minute per IP). That's the limits working, not a bug.
+
+---
+*Round 1 (1 Nov 2026) follows.*
+
 ## Result
 
 **146 API cases: 137 passed, 0 failed, 9 not executable.** (Re-run after the security fixes; that run added EDGE-15b: Staff cannot complete bookings or record payments.) Another **6 UI checks passed** in the browser at 375 px.

@@ -1,5 +1,5 @@
 # NestJS API + worker (same image, different command). Build context: repo root.
-FROM node:22-alpine AS build
+FROM node:22.23.4-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
@@ -10,7 +10,7 @@ COPY shared shared
 COPY backend backend
 RUN npm run build -w shared && npm run build -w backend
 
-FROM node:22-alpine AS runtime
+FROM node:22.23.4-alpine AS runtime
 ENV NODE_ENV=production TZ=UTC
 WORKDIR /app
 COPY package.json package-lock.json ./

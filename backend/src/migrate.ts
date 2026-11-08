@@ -23,7 +23,7 @@ async function ensureAppRole() {
     await c.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO jes_app`);
     await c.query(`REVOKE INSERT, UPDATE, DELETE ON schema_migrations FROM jes_app`);
     // audit rows are append-only for the application
-    await c.query(`REVOKE UPDATE, DELETE ON booking_history, expense_audit FROM jes_app`);
+    await c.query(`REVOKE UPDATE, DELETE ON booking_history, expense_audit, admin_audit FROM jes_app`);
   } finally {
     c.release();
   }

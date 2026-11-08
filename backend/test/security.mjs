@@ -130,7 +130,7 @@ const OWNER_ONLY = [
   ['GET', '/reports/recap.pdf?month=2026-10'], ['GET', '/reports/trend'], ['GET', '/integrations/google'], ['GET', '/integrations/google/auth-url'], ['POST', '/integrations/google/resync'],
   ['POST', '/integrations/google/disconnect'], ['PUT', '/integrations/google/calendar', { calendarId: 'x' }], ['POST', '/booking-types', {}], ['DELETE', `/booking-types/${SO.id}`],
   ['POST', '/photographers', {}], ['POST', '/addons', {}], ['POST', '/expense-categories', {}], ['PUT', '/settings', {}], ['PUT', '/templates/NEW', { body: 'x' }],
-  ['POST', '/users', {}], ['PATCH', `/users/${me.id}`, {}], ['POST', '/reports/months/2020-01/close'], ['POST', '/reports/months/2020-01/reopen', { reason: 'xxx' }],
+  ['POST', '/users', {}], ['PATCH', `/users/${me.id}`, {}], ['DELETE', `/users/${me.id}`], ['POST', '/reports/months/2020-01/close'], ['POST', '/reports/months/2020-01/reopen', { reason: 'xxx' }],
 ];
 await R.test('SEC-B1', '−', `Staff → ${OWNER_ONLY.length} Owner-only endpoints all return 403 with no data`, async () => {
   for (const [m, p, b] of OWNER_ONLY) {
@@ -177,10 +177,66 @@ await R.test('SEC-B7', '−', 'Idempotency keys are per user: Staff reusing Owne
 });
 await R.test('SEC-B8', '−', 'Secrets are never returned: Google refresh token absent from /settings (Owner and Staff)', async () => {
   for (const t of [owner, staff]) assert.ok(!('gcalRefreshToken' in (await api(t, 'GET', '/settings')).data));
-  assert.ok(!JSON.stringify((await api(owner, 'GET', '/users')).data).includes('password'));
+  const users = (await api(owner, 'GET', '/users')).data;
+  assert.ok(!JSON.stringify(users).includes('$argon2'), 'password hash returned');
+  assert.ok(users.every((u) => !('passwordHash' in u) && !('password' in u)), 'password field returned');
 });
 
 // =====================================================================
+R.area('B2. User management & session attacks');
+await R.test('SEC-U1', '−', 'Staff cannot escalate through the self-service profile (role/email/active in the body are ignored)', async () => {
+  const r = await api(staff, 'PATCH', '/auth/me', { name: 'Staf', role: 'OWNER', email: 'pwn@x.io', active: false });
+  assert.equal(r.data.user.role, 'STAFF'); assert.equal(r.data.user.email, STAFF.email);
+  assert.equal((await api(r.data.accessToken, 'GET', '/users')).status, 403);
+});
+await R.test('SEC-U2', '−', 'Mass assignment on registration: id, passwordHash, deletedAt, lastLoginAt in the body are ignored', async () => {
+  const email = `mass-${run}@jes.local`;
+  const r = await api(owner, 'POST', '/users', { name: 'Mass', email, password: 'Mass-Assign-2026', role: 'STAFF', id: '00000000-0000-7000-8000-000000000001', passwordHash: 'x', deletedAt: '2020-01-01', lastLoginAt: '2020-01-01' });
+  assert.equal(r.status, 201); assert.notEqual(r.data.id, '00000000-0000-7000-8000-000000000001'); assert.equal(r.data.lastLoginAt, null);
+  assert.match(sql(`SELECT password_hash FROM users WHERE email = '${email}'`), /^\$argon2id\$/);
+  await api(owner, 'DELETE', `/users/${r.data.id}`);
+});
+await R.test('SEC-U3', '−', 'Brute-forcing the current password on /auth/password is locked after 5 tries', async () => {
+  const u = await tempUser();
+  const t = await login(u);
+  const codes = [];
+  for (let i = 0; i < 7; i++) codes.push((await api(t, 'POST', '/auth/password', { currentPassword: `guess-${i}`, newPassword: 'Brute-Force-2026' })).status);
+  assert.deepEqual(codes.slice(0, 5), [400, 400, 400, 400, 400]); assert.equal(codes[5], 429);
+  const right = await api(t, 'POST', '/auth/password', { currentPassword: u.password, newPassword: 'Brute-Force-2026' });
+  assert.equal(right.status, 429, 'even the right password is refused while locked');
+});
+await R.test('SEC-U4', '−', 'Owner password resets must meet the policy too', async () => {
+  const u = await tempUser();
+  const r = await api(owner, 'PATCH', `/users/${u.id}`, { name: 'Sec test', email: u.email, role: 'STAFF', active: true, password: 'abc' });
+  assert.equal(r.status, 400); assert.equal(r.data.fields.password, 'Minimal 10 karakter');
+});
+await R.test('SEC-U5', '−', 'A removed user loses access at once: access token, refresh cookie and login all fail', async () => {
+  const u = await tempUser();
+  const l = await api(null, 'POST', '/auth/login', u);
+  const cookie = l.headers.get('set-cookie').split(';')[0];
+  assert.equal((await api(owner, 'DELETE', `/users/${u.id}`)).status, 204);
+  assert.equal((await api(l.data.accessToken, 'GET', '/bookings')).status, 401);
+  assert.equal((await api(null, 'POST', '/auth/refresh', undefined, { cookie })).status, 401);
+  assert.equal((await api(null, 'POST', '/auth/login', u)).status, 401);
+});
+await R.test('SEC-U6', '−', 'Audit trails are append-only for the application role (UPDATE/DELETE denied)', async () => {
+  const appPw = ENV.APP_DB_PASSWORD;
+  const asApp = (q) => { try { return execFileSync('docker', ['compose', 'exec', '-T', '-e', `PGPASSWORD=${appPw}`, 'db', 'psql', '-h', '127.0.0.1', '-U', 'jes_app', '-d', 'jes', '-tA', '-c', q], { encoding: 'utf8', stdio: 'pipe' }); } catch (e) { return String(e.stderr); } };
+  for (const t of ['admin_audit', 'booking_history', 'expense_audit']) {
+    assert.match(asApp(`UPDATE ${t} SET id = id WHERE false`), /permission denied/, `${t} UPDATE`);
+    assert.match(asApp(`DELETE FROM ${t} WHERE false`), /permission denied/, `${t} DELETE`);
+  }
+  assert.doesNotMatch(asApp('SELECT count(*) FROM admin_audit'), /permission denied/);
+});
+await R.test('SEC-U7', '−', 'Refresh flooding with one stolen cookie is throttled per session, without locking out other sessions', async () => {
+  const c1 = (await api(null, 'POST', '/auth/login', OWNER)).headers.get('set-cookie').split(';')[0];
+  const rs = await Promise.all(Array.from({ length: 40 }, () => api(null, 'POST', '/auth/refresh', undefined, { cookie: c1, __noRetry: true })));
+  assert.ok(rs.some((r) => r.status === 429), 'no 429 in 40 parallel refreshes');
+  const other = (await api(null, 'POST', '/auth/login', STAFF)).headers.get('set-cookie').split(';')[0];
+  assert.equal((await api(null, 'POST', '/auth/refresh', undefined, { cookie: other, __noRetry: true })).status, 200, 'another session is unaffected');
+  return `${rs.filter((r) => r.status === 429).length} of 40 throttled`;
+});
+
 R.area('C. Injection & output encoding');
 const SQLI = ["' OR '1'='1", "'; DROP TABLE bookings;--", "1' UNION SELECT password_hash,1,1 FROM users--", "%' AND pg_sleep(3)--", "\\'; SELECT pg_sleep(3);--"];
 await R.test('SEC-C1', '−', `SQL injection: ${SQLI.length} payloads × search/filter params — no error, no leak, no delay`, async () => {

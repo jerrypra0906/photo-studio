@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  // never inline fonts as data: URIs — the CSP allows fonts from 'self' only
+  build: { assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined) },
   resolve: {
     // use the shared TypeScript source directly (pricing, formatters, schemas)
     alias: { '@jes/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)) },

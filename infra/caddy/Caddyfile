@@ -1,0 +1,30 @@
+# TLS edge for the single GCP server: automatic Let's Encrypt certificates, HTTP→HTTPS, HSTS.
+{
+	email {$ACME_EMAIL}
+	servers {
+		protocols h1 h2
+	}
+}
+
+{$DOMAIN} {
+	# empty in production (Let's Encrypt); "internal" for local verification with DOMAIN=localhost
+	tls {$TLS_MODE}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+		-Via
+	}
+
+	encode zstd gzip
+
+	# Caddy trusts no upstream proxy, so any client-supplied X-Forwarded-For is replaced with the real client IP.
+	reverse_proxy web:8080 {
+		header_up X-Forwarded-Proto https
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

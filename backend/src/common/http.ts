@@ -78,7 +78,7 @@ export class AuthGuard implements CanActivate {
     if (!p) throw new AppError(401, 'UNAUTHENTICATED', 'Sesi berakhir, silakan masuk kembali');
     let u = userCache.get(p.sub!);
     if (!u || Date.now() - u.at > 5000) {
-      const row = await this.db.one(`SELECT active, role FROM users WHERE id = $1`, [p.sub]);
+      const row = await this.db.one(`SELECT active AND deleted_at IS NULL AS active, role FROM users WHERE id = $1`, [p.sub]);
       u = { active: !!row?.active, role: row?.role, at: Date.now() };
       userCache.set(p.sub!, u);
     }
@@ -111,7 +111,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
     if (err?.code === '23505') {
-      res.status(409).json({ code: 'DUPLICATE', message: 'Nama sudah ada' });
+      const email = err?.constraint === 'users_email_live';
+      res.status(409).json({ code: 'DUPLICATE', message: email ? 'Email sudah terdaftar' : 'Nama sudah ada', ...(email ? { fields: { email: 'Email sudah terdaftar' } } : {}) });
       return;
     }
     if (err?.type === 'entity.too.large' || err?.status === 413) {

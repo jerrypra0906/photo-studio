@@ -21,9 +21,12 @@ let refreshInFlight: Promise<any | null> | null = null;
  */
 export function refreshSession(): Promise<any | null> {
   refreshInFlight ??= (async () => {
-    for (let attempt = 0; attempt < 4; attempt++) {
-      if (attempt) await new Promise((res) => setTimeout(res, 800 * attempt));
+    let wait = 0;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (attempt) await new Promise((res) => setTimeout(res, wait || 800 * attempt));
       const r = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'same-origin' }).catch(() => null);
+      // rate limited: wait as long as the server asks (capped), the session itself is still valid
+      wait = r?.status === 429 ? Math.min(15, Number(r.headers.get('retry-after')) || 3) * 1000 : 0;
       if (!r || r.status >= 500 || r.status === 429) continue;
       if (!r.ok) return null;
       const data = await r.json();

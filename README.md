@@ -54,9 +54,21 @@ infra/      Dockerfiles and nginx config
 ```bash
 npm test                                           # pricing unit tests (PRD §6.3 worked examples)
 node backend/test/smoke.mjs http://localhost:8080  # 23 quick API checks against the running stack
-node backend/test/functional.mjs                   # 152 functional cases, every user story ± and the dashboard (docs/TEST_REPORT.md)
-node backend/test/security.mjs                     # 56 penetration-test cases (docs/SECURITY_REVIEW.md)
+node backend/test/functional.mjs                   # 168 backend functional cases: every user story ±, dashboard, user management
+(cd frontend && npx playwright test)               # 48 frontend E2E cases in mobile Chromium (first run: npx playwright install chromium)
+node backend/test/security.mjs                     # 63 penetration-test cases (docs/SECURITY_REVIEW.md)
+node backend/test/prod-check.mjs                   # 22 production architecture + transport checks (docs/ARCHITECTURE_REVIEW.md)
 ```
+
+Reports: [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md), [docs/ARCHITECTURE_REVIEW.md](docs/ARCHITECTURE_REVIEW.md).
+
+## Deploying to production (GCP)
+
+One VM, Docker Compose, Caddy for TLS, nightly backups: see **[docs/DEPLOY_GCP.md](docs/DEPLOY_GCP.md)** and `docker-compose.prod.yml`. The local `docker-compose.yml` is for development only.
+
+## Users
+
+Owners register, edit and remove accounts in **Admin → Pengguna**. There is no public sign-up. Everyone can change their own name and password in **Akun saya**. Passwords need at least 10 characters with a letter and a digit.
 
 The smoke test creates bookings on random far-future dates and in a random 2025 month, so run it only against a dev database.
 

@@ -1,6 +1,6 @@
 {
   "suite": "functional",
-  "ranAt": "2026-11-06T17:35:00.942Z",
+  "ranAt": "2026-11-08T13:26:52.271Z",
   "baseUrl": "http://localhost:8080",
   "results": [
     {
@@ -10,7 +10,7 @@
       "title": "Owner logs in → access token, role, 30-day httpOnly SameSite=Strict refresh cookie",
       "status": "PASS",
       "note": "",
-      "ms": 27
+      "ms": 30
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -28,7 +28,7 @@
       "title": "Wrong password and unknown email give the same generic message",
       "status": "PASS",
       "note": "",
-      "ms": 53
+      "ms": 54
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -36,8 +36,8 @@
       "type": "−",
       "title": "5 failures in 10 min lock the login for 15 min, even with the right password",
       "status": "PASS",
-      "note": "Terlalu banyak percobaan. Coba lagi setelah 00.47 WIB",
-      "ms": 60398
+      "note": "Terlalu banyak percobaan. Coba lagi setelah 20.39 WIB",
+      "ms": 22431
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -46,7 +46,7 @@
       "title": "No token / garbage token on a protected endpoint → 401",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 3
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -55,7 +55,7 @@
       "title": "Logout revokes the refresh session",
       "status": "PASS",
       "note": "",
-      "ms": 40
+      "ms": 47
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -64,7 +64,7 @@
       "title": "Deactivated user cannot log in",
       "status": "PASS",
       "note": "",
-      "ms": 174
+      "ms": 374
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -82,7 +82,7 @@
       "title": "Staff signs in with role STAFF and can list bookings and schedule",
       "status": "PASS",
       "note": "",
-      "ms": 20
+      "ms": 13
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -91,7 +91,7 @@
       "title": "Staff gets 403 and no data on every Admin / Finance endpoint (15 endpoints)",
       "status": "PASS",
       "note": "",
-      "ms": 19
+      "ms": 17
     },
     {
       "area": "Access — US-01 login, US-02 staff",
@@ -100,7 +100,7 @@
       "title": "Staff-entered price adjustment is ignored by the server",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 5
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -118,7 +118,7 @@
       "title": "An inactive booking type cannot be booked",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 6
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -127,7 +127,7 @@
       "title": "3 hours from 14:00 ends at 17:00 and prices 3 × rate",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 4
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -136,7 +136,7 @@
       "title": "A per-hour add-on doubles when duration goes from 1 h to 2 h",
       "status": "PASS",
       "note": "",
-      "ms": 13
+      "ms": 9
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -154,7 +154,7 @@
       "title": "Duration above the 8 h maximum is rejected (\"Maks 8 jam\")",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -163,7 +163,7 @@
       "title": "A free slot is saved and appears in the schedule for that day",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 4
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -172,7 +172,7 @@
       "title": "Overlapping slot → 409 \"Bentrok dengan <no> (<client>, hh:mm–hh:mm)\"",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 5
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -181,7 +181,7 @@
       "title": "Back-to-back booking is allowed with buffer 0 but blocked by a 30-min buffer",
       "status": "PASS",
       "note": "",
-      "ms": 19
+      "ms": 15
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -199,7 +199,7 @@
       "title": "Booking on a closed weekday needs a reason",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 5
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -208,7 +208,7 @@
       "title": "Start time off the 30-minute grid is rejected",
       "status": "PASS",
       "note": "",
-      "ms": 1
+      "ms": 2
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -217,7 +217,7 @@
       "title": "Staff cannot pick a past date",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -226,7 +226,7 @@
       "title": "Owner can back-enter a past booking; it is flagged back-dated",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 6
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -235,7 +235,7 @@
       "title": "Phone \"0821 2350 0508\" / \"+62 821-2350-0508\" / \"82123500508\" all normalise to 6282123500508",
       "status": "PASS",
       "note": "",
-      "ms": 14
+      "ms": 12
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -244,7 +244,7 @@
       "title": "Typing \"Aur\" or part of the phone suggests the previous client",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 3
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -253,7 +253,7 @@
       "title": "Empty client name → \"Nama klien minimal 2 karakter\", nothing saved",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -262,7 +262,7 @@
       "title": "Phone \"12ab\" → \"Masukkan nomor telepon yang valid\"",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -271,7 +271,7 @@
       "title": "Photographer Hamja is saved on a Photo Package (name snapshotted)",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 3
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -280,7 +280,7 @@
       "title": "A photographer already booked 15:00–16:00 cannot be booked again then",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 2
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -289,7 +289,7 @@
       "title": "Photo Package without photographer → \"Pilih fotografer\"",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -298,7 +298,7 @@
       "title": "An inactive photographer cannot be assigned",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 4
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -307,7 +307,7 @@
       "title": "MUA + Hairdo adds a flat 600.000 line",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 3
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -316,7 +316,7 @@
       "title": "Extra person × 5 = 125.000",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 3
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -334,7 +334,7 @@
       "title": "Quantity 0 or negative is rejected",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 2
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -343,7 +343,7 @@
       "title": "Same add-on twice and an inactive add-on are rejected",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 17
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -352,7 +352,7 @@
       "title": "PP 1 h + MUA hairdo + Dekorasi = Rp1.449.000 with every line",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 4
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -361,7 +361,7 @@
       "title": "A client-supplied total/status/bookingNo is ignored (server re-prices)",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 4
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -423,7 +423,7 @@
       "type": "+",
       "title": "Booking numbers are JES-YYMMDD-NNN from the session date and increase per day",
       "status": "PASS",
-      "note": "JES-340624-001, JES-340624-002",
+      "note": "JES-600918-001, JES-600918-002",
       "ms": 7
     },
     {
@@ -433,7 +433,7 @@
       "title": "5 devices save the same slot at once → exactly one succeeds, others get \"slot taken\"",
       "status": "PASS",
       "note": "",
-      "ms": 17
+      "ms": 16
     },
     {
       "area": "Create booking — US-03 … US-11",
@@ -442,7 +442,7 @@
       "title": "Retry after a dropped response (same Idempotency-Key) returns the same booking, no duplicate",
       "status": "PASS",
       "note": "",
-      "ms": 14
+      "ms": 13
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -451,7 +451,7 @@
       "title": "Day list is in time order with client, type, hours, photographer and status",
       "status": "PASS",
       "note": "",
-      "ms": 15
+      "ms": 13
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -461,6 +461,15 @@
       "status": "PASS",
       "note": "",
       "ms": 8
+    },
+    {
+      "area": "Manage bookings — US-12 … US-15",
+      "id": "EDGE-12a",
+      "type": "−",
+      "title": "A name query containing digits does not match phone numbers; a phone-shaped query still does",
+      "status": "PASS",
+      "note": "",
+      "ms": 7
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -478,7 +487,7 @@
       "title": "Cancelled bookings are hidden by default and shown on request",
       "status": "PASS",
       "note": "",
-      "ms": 23
+      "ms": 11
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -487,7 +496,7 @@
       "title": "Reschedule to a free slot → same number, invoice R1, Reschedule template shows old and new time",
       "status": "PASS",
       "note": "",
-      "ms": 13
+      "ms": 10
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -496,7 +505,7 @@
       "title": "Adding Dekorasi to Ides (749.000, DP 300.000) → 999.000, balance 699.000, revision logged",
       "status": "PASS",
       "note": "",
-      "ms": 10
+      "ms": 17
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -505,7 +514,7 @@
       "title": "Editing only internal notes does not bump the invoice revision",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 5
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -514,7 +523,7 @@
       "title": "Edit keeps snapshot prices by default; applyCurrentPrices re-prices from the master",
       "status": "PASS",
       "note": "",
-      "ms": 20
+      "ms": 17
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -550,7 +559,7 @@
       "title": "Cancel with \"Customer cancelled\" → Cancelled, slot free, record kept",
       "status": "PASS",
       "note": "",
-      "ms": 9
+      "ms": 7
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -559,7 +568,7 @@
       "title": "A cancelled booking keeps its recorded DP (refund reminder data)",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 7
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -568,7 +577,7 @@
       "title": "A cancelled booking cannot be edited, cancelled again or completed",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 6
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -586,7 +595,7 @@
       "title": "Staff cannot complete a booking or record a payment (Owner-only money actions)",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 6
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -595,7 +604,7 @@
       "title": "Paid 500.000 on a 170.000 total → \"Pembayaran tidak boleh melebihi total\"",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 2
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -604,7 +613,7 @@
       "title": "Mark \"Paid in full\" + Complete → Completed, paid = total, balance 0, leaves \"To close\"",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 5
     },
     {
       "area": "Manage bookings — US-12 … US-15",
@@ -613,7 +622,7 @@
       "title": "Staff cannot edit a Completed booking (Owner only)",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 4
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -621,8 +630,8 @@
       "type": "+",
       "title": "Invoice PDF: application/pdf, A5 page, under 300 KB, logo embedded",
       "status": "PASS",
-      "note": "25 KB",
-      "ms": 77
+      "note": "24 KB",
+      "ms": 45
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -631,7 +640,7 @@
       "title": "After an edit the invoice number gets -R1",
       "status": "PASS",
       "note": "",
-      "ms": 55
+      "ms": 60301
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -640,7 +649,7 @@
       "title": "Missing bank details → 409 \"Tambahkan data rekening bank di Pengaturan\", no PDF",
       "status": "PASS",
       "note": "",
-      "ms": 60226
+      "ms": 15
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -649,7 +658,7 @@
       "title": "Cancelled booking has no invoice",
       "status": "PASS",
       "note": "",
-      "ms": 10
+      "ms": 3
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -658,7 +667,7 @@
       "title": "New-booking message has name, schedule, items, total and bank details",
       "status": "PASS",
       "note": "",
-      "ms": 13
+      "ms": 3
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -667,7 +676,7 @@
       "title": "Open WhatsApp link is wa.me/<62number>?text=<encoded message>",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 3
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -676,7 +685,7 @@
       "title": "No client number → no wa.me link (copy still available)",
       "status": "PASS",
       "note": "",
-      "ms": 14
+      "ms": 10
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -685,7 +694,7 @@
       "title": "Studio Only message drops the empty photographer line but keeps the type",
       "status": "PASS",
       "note": "",
-      "ms": 12
+      "ms": 7
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -694,7 +703,7 @@
       "title": "Balance (pelunasan) and Cancel templates fill their specific fields",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 4
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -703,7 +712,7 @@
       "title": "Unknown template kind → 400",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "Invoice & WhatsApp — US-16, US-17",
@@ -712,7 +721,7 @@
       "title": "\"Invoice sent\" is recorded and can be undone",
       "status": "PASS",
       "note": "",
-      "ms": 9
+      "ms": 7
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -721,7 +730,7 @@
       "title": "Add \"Group Package\" 699.000/h with photographer → bookable",
       "status": "PASS",
       "note": "",
-      "ms": 10
+      "ms": 7
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -739,7 +748,7 @@
       "title": "Duplicate name differing only in case → 409 \"Nama sudah ada\"",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 2
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -766,7 +775,7 @@
       "title": "Add photographer → selectable on Photo Package",
       "status": "PASS",
       "note": "",
-      "ms": 12
+      "ms": 11
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -784,7 +793,7 @@
       "title": "After deactivation, existing bookings still show the photographer name",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 5
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -793,7 +802,7 @@
       "title": "Empty photographer name → 400",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 3
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -802,7 +811,7 @@
       "title": "Add \"Dress rental\" 150.000 per booking for Photo Package",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 9
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -811,7 +820,7 @@
       "title": "Change unit to per hour 125.000 → new bookings price it × hours",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 9
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -838,7 +847,7 @@
       "title": "Bank account in Settings appears in messages",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 2
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -847,7 +856,7 @@
       "title": "Saving a template with {client_name} and {total} changes the generated message",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 10
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -856,7 +865,7 @@
       "title": "Template with {clientname} → \"Placeholder tidak dikenal\" listing the valid ones",
       "status": "PASS",
       "note": "",
-      "ms": 1
+      "ms": 2
     },
     {
       "area": "Admin — US-18 … US-21",
@@ -874,7 +883,7 @@
       "title": "Completing Hamja's Photo Package drafts \"Fee fotografer — Hamja — <no>\" for Rp250.000",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 6
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -883,7 +892,7 @@
       "title": "Electricity Rp500.000, payee PLN, with a bill photo → saved under its month",
       "status": "PASS",
       "note": "",
-      "ms": 17
+      "ms": 16
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -892,7 +901,7 @@
       "title": "Decoration Rp120.000 linked to Claire's booking shows on the booking with its margin",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 7
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -901,7 +910,7 @@
       "title": "Amount empty or 0 → \"Masukkan jumlah di atas Rp0\"",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 3
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -910,7 +919,7 @@
       "title": "Date paid tomorrow → \"Tanggal tidak boleh di masa depan\"",
       "status": "PASS",
       "note": "",
-      "ms": 1
+      "ms": 2
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -919,7 +928,7 @@
       "title": "Same category, amount and date → \"Sepertinya duplikat\"; force saves a second one",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 5
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -928,7 +937,7 @@
       "title": "Staff cannot reach expenses (list, create, receipt)",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 4
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -937,7 +946,7 @@
       "title": "Receipt larger than 5 MB → 413; a text file renamed .png → 400",
       "status": "PASS",
       "note": "",
-      "ms": 17
+      "ms": 24
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -946,7 +955,7 @@
       "title": "Photographer without default fee → draft with empty amount that must be filled to confirm",
       "status": "PASS",
       "note": "",
-      "ms": 15
+      "ms": 20
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -955,7 +964,7 @@
       "title": "Owner shot it herself → confirming Rp0 records \"no fee\" and clears the to-do",
       "status": "PASS",
       "note": "",
-      "ms": 14
+      "ms": 20
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -964,7 +973,7 @@
       "title": "A booking cancelled before completion creates no fee draft",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 8
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -973,7 +982,7 @@
       "title": "MUA add-on with a vendor fee drafts an MUA fee on completion",
       "status": "PASS",
       "note": "",
-      "ms": 12
+      "ms": 14
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -991,7 +1000,7 @@
       "title": "A recurring Fixed category gets a draft for the current month from the worker",
       "status": "PASS",
       "note": "",
-      "ms": 2300
+      "ms": 1452
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -1000,7 +1009,7 @@
       "title": "\"internet\" when \"Internet\" exists → 409",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 4
     },
     {
       "area": "Expenses & fees — US-22 … US-25",
@@ -1009,7 +1018,7 @@
       "title": "A category with expenses, or a system category, cannot be deleted",
       "status": "PASS",
       "note": "",
-      "ms": 14
+      "ms": 13
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1018,7 +1027,7 @@
       "title": "Recap: revenue by type + add-ons + adjustments = total; expenses; net; margin; previous month",
       "status": "PASS",
       "note": "revenue 1843000, expenses 620000, net 1223000, margin 66.4%",
-      "ms": 12
+      "ms": 10
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1027,7 +1036,7 @@
       "title": "Drill-down: category filter returns that category's expenses",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 4
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1036,7 +1045,7 @@
       "title": "Receivables list the bookings with a balance",
       "status": "PASS",
       "note": "",
-      "ms": 7
+      "ms": 6
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1045,7 +1054,7 @@
       "title": "Collected basis = amounts actually paid",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 6
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1054,7 +1063,7 @@
       "title": "Drafts are excluded and reported: \"1 draft (Rp250.000)\"",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 7
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1063,7 +1072,7 @@
       "title": "Confirming the draft fee adds it to Photographer fees",
       "status": "PASS",
       "note": "",
-      "ms": 10
+      "ms": 11
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1072,7 +1081,7 @@
       "title": "Editing 500.000 → 450.000 updates totals immediately and writes an audit row",
       "status": "PASS",
       "note": "",
-      "ms": 134
+      "ms": 163
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1081,7 +1090,7 @@
       "title": "Deleting removes it from totals but keeps it in the audit log (soft delete)",
       "status": "PASS",
       "note": "",
-      "ms": 216
+      "ms": 244
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1090,7 +1099,7 @@
       "title": "Expenses above revenue show as a negative net (loss)",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 10
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1117,7 +1126,7 @@
       "title": "CSV: Date, Client, Description, Amount; bookings, negative expense rows, Total row",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 4
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1126,7 +1135,7 @@
       "title": "One-page recap PDF",
       "status": "PASS",
       "note": "",
-      "ms": 26
+      "ms": 27
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1135,7 +1144,7 @@
       "title": "Close month with drafts left → \"Konfirmasi atau hapus 1 draft dulu\"",
       "status": "PASS",
       "note": "",
-      "ms": 102
+      "ms": 130
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1153,7 +1162,7 @@
       "title": "Closed month: bookings and expenses become read-only (edit, add, pay, reschedule in/out)",
       "status": "PASS",
       "note": "",
-      "ms": 15
+      "ms": 14
     },
     {
       "area": "Monthly recap, export, close — US-23, US-26, US-27",
@@ -1165,13 +1174,157 @@
       "ms": 7
     },
     {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-01",
+      "type": "+",
+      "title": "Owner registers a Staff account → listed, can sign in, last login recorded",
+      "status": "PASS",
+      "note": "",
+      "ms": 58337
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-02",
+      "type": "−",
+      "title": "Weak passwords are rejected: < 10 chars, no digit, no letter, equal to email",
+      "status": "PASS",
+      "note": "",
+      "ms": 15
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-03",
+      "type": "−",
+      "title": "Duplicate email (any letter case) → 409 \"Email sudah terdaftar\"; bad email / short name → 400",
+      "status": "PASS",
+      "note": "",
+      "ms": 53
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-04",
+      "type": "+",
+      "title": "Edit: rename and promote to Owner → existing sessions end; new login gets Owner access",
+      "status": "PASS",
+      "note": "",
+      "ms": 100
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-05",
+      "type": "+",
+      "title": "Owner resets a password → old password fails, new one works",
+      "status": "PASS",
+      "note": "",
+      "ms": 102
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-06",
+      "type": "+",
+      "title": "Deactivate → cannot sign in; reactivate → can sign in again",
+      "status": "PASS",
+      "note": "",
+      "ms": 76
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-07",
+      "type": "−",
+      "title": "Owner cannot demote, deactivate or remove their own account",
+      "status": "PASS",
+      "note": "",
+      "ms": 8
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-08",
+      "type": "+",
+      "title": "Remove → gone from the list, access ends at once, history keeps the name",
+      "status": "PASS",
+      "note": "",
+      "ms": 74
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-09",
+      "type": "+",
+      "title": "A removed user's email can be registered again",
+      "status": "PASS",
+      "note": "",
+      "ms": 27
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-10",
+      "type": "−",
+      "title": "Remove an unknown user → 404; malformed id → 400",
+      "status": "PASS",
+      "note": "",
+      "ms": 4
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-11",
+      "type": "−",
+      "title": "Staff cannot list, register, edit or remove users (403)",
+      "status": "PASS",
+      "note": "",
+      "ms": 6
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-12",
+      "type": "+",
+      "title": "Any user edits their own name; the new token carries it; role cannot be changed this way",
+      "status": "PASS",
+      "note": "",
+      "ms": 33
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-13",
+      "type": "−",
+      "title": "Own password change: wrong current, same as current, weak → rejected; 5 wrong tries → locked",
+      "status": "PASS",
+      "note": "",
+      "ms": 434
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-14",
+      "type": "+",
+      "title": "Own password change succeeds → other devices signed out, this device continues",
+      "status": "PASS",
+      "note": "",
+      "ms": 1378
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-15",
+      "type": "+",
+      "title": "Admin actions are audited (create, update, delete, password change) with the actor",
+      "status": "PASS",
+      "note": "",
+      "ms": 258
+    },
+    {
+      "area": "User management — register, edit, remove, self-service (FR-16)",
+      "id": "USER-16",
+      "type": "−",
+      "title": "Two Owners demoting each other at the same moment cannot leave the studio without an Owner",
+      "status": "PASS",
+      "note": "200 / 401",
+      "ms": 257
+    },
+    {
       "area": "Owner dashboard — monthly performance & trend (FR-23, FR-28)",
       "id": "DASH-01",
       "type": "+",
       "title": "Every month in the trend equals that month's recap (revenue, expenses, net, bookings)",
       "status": "PASS",
-      "note": "2002-03: revenue 1843000, expenses 700000, net 1143000",
-      "ms": 13
+      "note": "2013-03: revenue 1843000, expenses 700000, net 1143000",
+      "ms": 19
     },
     {
       "area": "Owner dashboard — monthly performance & trend (FR-23, FR-28)",
@@ -1180,7 +1333,7 @@
       "title": "Window totals are the sum of the months; margin, best/worst and loss months are consistent",
       "status": "PASS",
       "note": "",
-      "ms": 57224
+      "ms": 4
     },
     {
       "area": "Owner dashboard — monthly performance & trend (FR-23, FR-28)",
@@ -1189,7 +1342,7 @@
       "title": "Collected basis uses amounts received; mix and YTD are returned",
       "status": "PASS",
       "note": "",
-      "ms": 21
+      "ms": 9
     },
     {
       "area": "Owner dashboard — monthly performance & trend (FR-23, FR-28)",
@@ -1198,7 +1351,7 @@
       "title": "The running month is flagged partial and left out of best/worst/average",
       "status": "PASS",
       "note": "",
-      "ms": 10
+      "ms": 6
     },
     {
       "area": "Owner dashboard — monthly performance & trend (FR-23, FR-28)",
@@ -1207,7 +1360,7 @@
       "title": "Months outside 1–36 or a malformed end month → 400",
       "status": "PASS",
       "note": "",
-      "ms": 9
+      "ms": 8
     },
     {
       "area": "Owner dashboard — monthly performance & trend (FR-23, FR-28)",
@@ -1234,7 +1387,7 @@
       "title": "Status \"Not connected\"; connect is refused until the OAuth client is configured",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 3
     },
     {
       "area": "Google Calendar — US-28, US-29",
@@ -1243,7 +1396,7 @@
       "title": "Staff cannot open the Integrations endpoints",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 3
     },
     {
       "area": "Google Calendar — US-28, US-29",
@@ -1260,8 +1413,8 @@
       "type": "−",
       "title": "Google unreachable: booking still saves instantly with status Pending and an outbox job",
       "status": "PASS",
-      "note": "saved in 9 ms",
-      "ms": 117
+      "note": "saved in 8 ms",
+      "ms": 108
     },
     {
       "area": "Google Calendar — US-28, US-29",
@@ -1270,7 +1423,7 @@
       "title": "Retries back off 30 s → 2 m → 10 m → 1 h, then Failed with error; Retry re-queues",
       "status": "PASS",
       "note": "last error: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET belum diatur di serv",
-      "ms": 1912
+      "ms": 13153
     },
     {
       "area": "Google Calendar — US-28, US-29",
@@ -1279,7 +1432,7 @@
       "title": "Cancelling a synced booking queues a calendar DELETE",
       "status": "PASS",
       "note": "",
-      "ms": 259
+      "ms": 393
     },
     {
       "area": "Google Calendar — US-28, US-29",
@@ -1288,7 +1441,7 @@
       "title": "An edit supersedes the queued job (one job per booking, no duplicate events)",
       "status": "PASS",
       "note": "",
-      "ms": 106
+      "ms": 110
     },
     {
       "area": "Google Calendar — US-28, US-29",

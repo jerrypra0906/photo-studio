@@ -30,7 +30,8 @@ const CAT = (n) => cats.find((c) => c.name === n).id;
 async function freeDay() {
   for (;;) {
     const d = `${2031 + Math.floor(Math.random() * 60)}-${String(1 + Math.floor(Math.random() * 12)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 28)).padStart(2, '0')}`;
-    if (!(await api(owner, 'GET', `/schedule?from=${d}&to=${d}`)).data.bookings.length) return d;
+    // the suite books on D … D+40, so the whole window must be empty
+    if (!(await api(owner, 'GET', `/schedule?from=${d}&to=${addDays(d, 40)}`)).data.bookings.length) return d;
   }
 }
 async function freeMonth() {
@@ -359,6 +360,12 @@ try {
     assert.ok((await api(owner, 'GET', '/bookings?q=LILIN')).data.some((b) => b.id === lilin.id));
     assert.ok((await api(owner, 'GET', '/bookings?q=0812-3456')).data.some((b) => b.id === lilin.id));
     assert.ok((await api(owner, 'GET', `/bookings?q=${lilin.bookingNo.slice(4)}`)).data.some((b) => b.id === lilin.id));
+  });
+  await R.test('EDGE-12a', '−', 'A name query containing digits does not match phone numbers; a phone-shaped query still does', async () => {
+    const b = (await book(owner, { date: addDays(D, 34), startTime: '10:00', clientName: `Phone Owner ${run}`, clientPhone: '0812 9988 7766' })).data;
+    cleanup.push(b.id);
+    assert.ok(!(await api(owner, 'GET', `/bookings?q=${encodeURIComponent('zz 9988 zz')}`)).data.some((x) => x.id === b.id), 'text query matched a phone');
+    assert.ok((await api(owner, 'GET', `/bookings?q=${encodeURIComponent('0812-9988')}`)).data.some((x) => x.id === b.id), 'phone query missed');
   });
   await R.test('US-12.3', '−', 'A week with no bookings returns an empty list (no error)', async () => {
     const r = await api(owner, 'GET', '/schedule?from=2099-12-01&to=2099-12-07');
@@ -815,6 +822,136 @@ try {
     assert.equal(r.status, 400); assert.equal(r.data.message, 'Alasan wajib diisi');
     assert.equal((await api(owner, 'POST', `/reports/months/${M}/reopen`, { reason: 'Koreksi tagihan listrik' })).data.closed, false);
     assert.equal((await api(owner, 'POST', `/bookings/${B1.id}/payment`, { paidAmount: 1373000 })).status, 200);
+  });
+
+  // =====================================================================
+  R.area('User management — register, edit, remove, self-service (FR-16)');
+  const uEmail = (tag) => `${tag}-${run}@jes.local`;
+  const cookieOf = (r) => r.headers.get('set-cookie')?.split(';')[0];
+  let newStaff;
+  await R.test('USER-01', '+', 'Owner registers a Staff account → listed, can sign in, last login recorded', async () => {
+    const r = await api(owner, 'POST', '/users', { name: 'Rina Staf', email: uEmail('rina'), password: 'Rina-Studio-2026', role: 'STAFF' });
+    assert.equal(r.status, 201); newStaff = r.data;
+    assert.equal(r.data.role, 'STAFF'); assert.ok(!('passwordHash' in r.data));
+    const l = await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Rina-Studio-2026' });
+    assert.equal(l.status, 200);
+    const row = (await api(owner, 'GET', '/users')).data.find((u) => u.id === newStaff.id);
+    assert.ok(row && row.lastLoginAt);
+  });
+  await R.test('USER-02', '−', 'Weak passwords are rejected: < 10 chars, no digit, no letter, equal to email', async () => {
+    const tries = [['Short1a', 'Minimal 10 karakter'], ['NoDigitsHereAtAll', 'Harus mengandung angka'], ['1234567890123', 'Harus mengandung huruf']];
+    for (const [pw, msg] of tries) {
+      const r = await api(owner, 'POST', '/users', { name: 'Weak', email: uEmail('weak'), password: pw, role: 'STAFF' });
+      assert.equal(r.status, 400, pw); assert.equal(r.data.fields.password, msg);
+    }
+    const same = await api(owner, 'POST', '/users', { name: 'Same', email: 'same1234567@jes.local', password: 'same1234567@jes.local', role: 'STAFF' });
+    assert.equal(same.data.fields.password, 'Kata sandi tidak boleh sama dengan email');
+  });
+  await R.test('USER-03', '−', 'Duplicate email (any letter case) → 409 "Email sudah terdaftar"; bad email / short name → 400', async () => {
+    const r = await api(owner, 'POST', '/users', { name: 'Dup', email: uEmail('RINA').replace('RINA', 'Rina'), password: 'Another-Pass-77', role: 'STAFF' });
+    assert.equal(r.status, 409); assert.equal(r.data.fields.email, 'Email sudah terdaftar');
+    assert.equal((await api(owner, 'POST', '/users', { name: 'X', email: 'not-an-email', password: 'Another-Pass-77', role: 'STAFF' })).status, 400);
+    assert.equal((await api(owner, 'POST', '/users', { name: 'X', email: uEmail('x'), password: 'Another-Pass-77', role: 'STAFF' })).data.fields.name, 'Nama minimal 2 karakter');
+  });
+  await R.test('USER-04', '+', 'Edit: rename and promote to Owner → existing sessions end; new login gets Owner access', async () => {
+    const l = await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Rina-Studio-2026' });
+    const oldCookie = cookieOf(l);
+    const r = await api(owner, 'PATCH', `/users/${newStaff.id}`, { name: 'Rina Manajer', email: uEmail('rina'), role: 'OWNER', active: true });
+    assert.equal(r.status, 200); assert.equal(r.data.role, 'OWNER'); assert.equal(r.data.name, 'Rina Manajer');
+    assert.equal((await api(null, 'POST', '/auth/refresh', undefined, { cookie: oldCookie })).status, 401, 'old session ended');
+    assert.equal((await api(l.data.accessToken, 'GET', '/bookings')).status, 401, 'old access token stops at once');
+    const t = await login({ email: uEmail('rina'), password: 'Rina-Studio-2026' });
+    assert.equal((await api(t, 'GET', '/users')).status, 200);
+    await api(owner, 'PATCH', `/users/${newStaff.id}`, { name: 'Rina Manajer', email: uEmail('rina'), role: 'STAFF', active: true });
+  });
+  await R.test('USER-05', '+', 'Owner resets a password → old password fails, new one works', async () => {
+    await api(owner, 'PATCH', `/users/${newStaff.id}`, { name: 'Rina Manajer', email: uEmail('rina'), role: 'STAFF', active: true, password: 'Reset-By-Owner-42' });
+    assert.equal((await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Rina-Studio-2026' })).status, 401);
+    assert.equal((await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Reset-By-Owner-42' })).status, 200);
+  });
+  await R.test('USER-06', '+', 'Deactivate → cannot sign in; reactivate → can sign in again', async () => {
+    await api(owner, 'PATCH', `/users/${newStaff.id}`, { name: 'Rina Manajer', email: uEmail('rina'), role: 'STAFF', active: false });
+    assert.equal((await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Reset-By-Owner-42' })).status, 401);
+    await api(owner, 'PATCH', `/users/${newStaff.id}`, { name: 'Rina Manajer', email: uEmail('rina'), role: 'STAFF', active: true });
+    assert.equal((await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Reset-By-Owner-42' })).status, 200);
+  });
+  await R.test('USER-07', '−', 'Owner cannot demote, deactivate or remove their own account', async () => {
+    const me = (await api(owner, 'GET', '/auth/me')).data;
+    assert.equal((await api(owner, 'PATCH', `/users/${me.id}`, { name: me.name, email: me.email, role: 'STAFF', active: true })).status, 400);
+    assert.equal((await api(owner, 'PATCH', `/users/${me.id}`, { name: me.name, email: me.email, role: 'OWNER', active: false })).status, 400);
+    const d = await api(owner, 'DELETE', `/users/${me.id}`);
+    assert.equal(d.status, 400); assert.equal(d.data.message, 'Tidak bisa menghapus akun sendiri');
+  });
+  await R.test('USER-08', '+', 'Remove → gone from the list, access ends at once, history keeps the name', async () => {
+    const t = await login({ email: uEmail('rina'), password: 'Reset-By-Owner-42' });
+    const b = (await book(t, { date: addDays(D, 33), startTime: '10:00' })).data;
+    cleanup.push(b.id);
+    assert.equal((await api(owner, 'DELETE', `/users/${newStaff.id}`)).status, 204);
+    assert.ok(!(await api(owner, 'GET', '/users')).data.some((u) => u.id === newStaff.id));
+    assert.equal((await api(t, 'GET', '/bookings')).status, 401, 'token rejected immediately');
+    assert.equal((await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Reset-By-Owner-42' })).status, 401);
+    const hist = (await api(owner, 'GET', `/bookings/${b.id}`)).data.history;
+    assert.equal(hist.find((h) => h.action === 'CREATE').changedByName, 'Rina Manajer');
+  });
+  await R.test('USER-09', '+', 'A removed user\'s email can be registered again', async () => {
+    const r = await api(owner, 'POST', '/users', { name: 'Rina Baru', email: uEmail('rina'), password: 'Fresh-Start-2026', role: 'STAFF' });
+    assert.equal(r.status, 201); assert.notEqual(r.data.id, newStaff.id);
+    newStaff = r.data;
+  });
+  await R.test('USER-10', '−', 'Remove an unknown user → 404; malformed id → 400', async () => {
+    assert.equal((await api(owner, 'DELETE', '/users/00000000-0000-7000-8000-000000000000')).status, 404);
+    assert.equal((await api(owner, 'DELETE', '/users/abc')).status, 400);
+  });
+  await R.test('USER-11', '−', 'Staff cannot list, register, edit or remove users (403)', async () => {
+    for (const [m, p, b] of [['GET', '/users'], ['POST', '/users', { name: 'Hack', email: uEmail('hack'), password: 'Hack-Pass-2026', role: 'OWNER' }],
+      ['PATCH', `/users/${newStaff.id}`, { name: 'x x', email: uEmail('rina'), role: 'OWNER', active: true }], ['DELETE', `/users/${newStaff.id}`]]) {
+      assert.equal((await api(staff, m, p, b)).status, 403, `${m} ${p}`);
+    }
+  });
+  let rinaTok;
+  await R.test('USER-12', '+', 'Any user edits their own name; the new token carries it; role cannot be changed this way', async () => {
+    rinaTok = await login({ email: uEmail('rina'), password: 'Fresh-Start-2026' });
+    const r = await api(rinaTok, 'PATCH', '/auth/me', { name: 'Rina Kasir', role: 'OWNER', email: 'evil@x.io' });
+    assert.equal(r.status, 200); assert.equal(r.data.user.name, 'Rina Kasir'); assert.equal(r.data.user.role, 'STAFF'); assert.equal(r.data.user.email, uEmail('rina'));
+    rinaTok = r.data.accessToken;
+    assert.equal((await api(rinaTok, 'GET', '/auth/me')).data.name, 'Rina Kasir');
+  });
+  await R.test('USER-13', '−', 'Own password change: wrong current, same as current, weak → rejected; 5 wrong tries → locked', async () => {
+    const wrong = await api(rinaTok, 'POST', '/auth/password', { currentPassword: 'nope', newPassword: 'Brand-New-Pass-1' });
+    assert.equal(wrong.status, 400); assert.equal(wrong.data.fields.currentPassword, 'Kata sandi saat ini salah');
+    assert.equal((await api(rinaTok, 'POST', '/auth/password', { currentPassword: 'Fresh-Start-2026', newPassword: 'Fresh-Start-2026' })).data.fields.newPassword, 'Kata sandi baru harus berbeda');
+    assert.equal((await api(rinaTok, 'POST', '/auth/password', { currentPassword: 'Fresh-Start-2026', newPassword: 'short1' })).status, 400);
+    for (let i = 0; i < 4; i++) await api(rinaTok, 'POST', '/auth/password', { currentPassword: `nope${i}`, newPassword: 'Brand-New-Pass-1' });
+    const locked = await api(rinaTok, 'POST', '/auth/password', { currentPassword: 'Fresh-Start-2026', newPassword: 'Brand-New-Pass-1' });
+    assert.equal(locked.status, 429);
+    sql(`DELETE FROM login_attempts WHERE key LIKE '%pwchange:${newStaff.id}'`);
+  });
+  await R.test('USER-14', '+', 'Own password change succeeds → other devices signed out, this device continues', async () => {
+    const other = await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Fresh-Start-2026' });
+    const r = await api(rinaTok, 'POST', '/auth/password', { currentPassword: 'Fresh-Start-2026', newPassword: 'Brand-New-Pass-1' });
+    assert.equal(r.status, 200); assert.ok(r.data.accessToken); assert.ok(cookieOf(r));
+    assert.equal((await api(null, 'POST', '/auth/refresh', undefined, { cookie: cookieOf(other) })).status, 401, 'other device ended');
+    assert.equal((await api(null, 'POST', '/auth/refresh', undefined, { cookie: cookieOf(r) })).status, 200, 'this device continues');
+    assert.equal((await api(null, 'POST', '/auth/login', { email: uEmail('rina'), password: 'Brand-New-Pass-1' })).status, 200);
+  });
+  await R.test('USER-15', '+', 'Admin actions are audited (create, update, delete, password change) with the actor', async () => {
+    const rows = sql(`SELECT string_agg(DISTINCT action, ',' ORDER BY action) FROM admin_audit WHERE target_id IN (SELECT id::text FROM users WHERE email = '${uEmail('rina')}')`);
+    for (const a of ['PASSWORD_CHANGE', 'PROFILE_UPDATE', 'USER_CREATE']) assert.ok(rows.includes(a), `${a} in ${rows}`);
+    assert.ok(Number(sql(`SELECT count(*) FROM admin_audit WHERE action = 'USER_DELETE' AND actor_id IS NOT NULL AND detail->>'email' = '${uEmail('rina')}'`)) >= 1);
+  });
+  await R.test('USER-16', '−', 'Two Owners demoting each other at the same moment cannot leave the studio without an Owner', async () => {
+    const mk = async (tag) => (await api(owner, 'POST', '/users', { name: `Owner ${tag}`, email: uEmail(tag), password: 'Owner-Race-2026', role: 'OWNER' })).data;
+    const [a, b] = [await mk('oa'), await mk('ob')];
+    const [ta, tb] = [await login({ email: uEmail('oa'), password: 'Owner-Race-2026' }), await login({ email: uEmail('ob'), password: 'Owner-Race-2026' })];
+    const rs = await Promise.all([
+      api(ta, 'PATCH', `/users/${b.id}`, { name: b.name, email: b.email, role: 'STAFF', active: true }),
+      api(tb, 'PATCH', `/users/${a.id}`, { name: a.name, email: a.email, role: 'STAFF', active: true }),
+    ]);
+    assert.ok(rs.every((r) => r.status !== 500), rs.map((r) => r.status).join(','));
+    assert.ok(Number(sql(`SELECT count(*) FROM users WHERE role = 'OWNER' AND active AND deleted_at IS NULL`)) >= 1);
+    for (const u of [a, b]) await api(owner, 'DELETE', `/users/${u.id}`);
+    await api(owner, 'DELETE', `/users/${newStaff.id}`);
+    return rs.map((r) => r.status).join(' / ');
   });
 
   // =====================================================================

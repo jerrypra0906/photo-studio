@@ -30,7 +30,9 @@ class AppModule {}
 async function bootstrap() {
   // schema, seed and DB roles are applied by the one-shot migrate job (dist/migrate.js) with owner credentials
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false });
-  app.set('trust proxy', 1);
+  // number of reverse proxies in front of the API: 1 = nginx (local), 2 = Caddy → nginx (production).
+  // Wrong values either let clients spoof X-Forwarded-For or make every user share one IP for rate limits.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
   app.disable('x-powered-by');
   app.use(pinoHttp({
     autoLogging: { ignore: (req) => /\/(health|ready)$/.test(req.url ?? '') },

@@ -1,0 +1,205 @@
+{
+  "suite": "prod-check",
+  "ranAt": "2026-11-08T13:17:54.150Z",
+  "baseUrl": "http://localhost:8080",
+  "results": [
+    {
+      "area": "ARCH-01 Transport security (TLS edge)",
+      "id": "ARCH-01a",
+      "type": "+",
+      "title": "The app is served over HTTPS end to end (login + data call)",
+      "status": "PASS",
+      "note": "",
+      "ms": 84
+    },
+    {
+      "area": "ARCH-01 Transport security (TLS edge)",
+      "id": "ARCH-01b",
+      "type": "−",
+      "title": "Plain HTTP is redirected to HTTPS (no app content over HTTP)",
+      "status": "PASS",
+      "note": "",
+      "ms": 3
+    },
+    {
+      "area": "ARCH-01 Transport security (TLS edge)",
+      "id": "ARCH-01c",
+      "type": "+",
+      "title": "HSTS (1 year) on every HTTPS response; Server/Via banners removed",
+      "status": "PASS",
+      "note": "",
+      "ms": 2
+    },
+    {
+      "area": "ARCH-01 Transport security (TLS edge)",
+      "id": "ARCH-01d",
+      "type": "−",
+      "title": "Legacy TLS 1.0/1.1 handshakes are refused; TLS 1.2+ accepted",
+      "status": "PASS",
+      "note": "",
+      "ms": 44
+    },
+    {
+      "area": "ARCH-01 Transport security (TLS edge)",
+      "id": "ARCH-01e",
+      "type": "+",
+      "title": "Refresh cookie carries Secure, HttpOnly, SameSite=Strict in production",
+      "status": "PASS",
+      "note": "",
+      "ms": 29
+    },
+    {
+      "area": "ARCH-06 Proxy chain & client IP",
+      "id": "ARCH-06a",
+      "type": "−",
+      "title": "A forged X-Forwarded-For through the edge is ignored: the API records the real client IP",
+      "status": "PASS",
+      "note": "recorded client IP 192.168.65.1",
+      "ms": 159
+    },
+    {
+      "area": "PEN Production surface (penetration checks over HTTPS)",
+      "id": "PEN-01",
+      "type": "−",
+      "title": "Secrets and server files are never served (/.env, /.git, compose file, backups, source maps)",
+      "status": "PASS",
+      "note": "",
+      "ms": 8
+    },
+    {
+      "area": "PEN Production surface (penetration checks over HTTPS)",
+      "id": "PEN-02",
+      "type": "−",
+      "title": "The Caddy admin API (2019) and the API port (3000) are not reachable from outside",
+      "status": "PASS",
+      "note": "",
+      "ms": 25
+    },
+    {
+      "area": "PEN Production surface (penetration checks over HTTPS)",
+      "id": "PEN-03",
+      "type": "−",
+      "title": "TRACE is not echoed back (no cross-site tracing)",
+      "status": "PASS",
+      "note": "",
+      "ms": 0
+    },
+    {
+      "area": "ARCH-02 Backups & restore (NFR-06)",
+      "id": "ARCH-02a",
+      "type": "+",
+      "title": "A verified database dump and receipts archive exist; the backup service is healthy",
+      "status": "PASS",
+      "note": "jes-20261108-201750.dump, receipts-20261108-201750.tar.gz",
+      "ms": 267
+    },
+    {
+      "area": "ARCH-02 Backups & restore (NFR-06)",
+      "id": "ARCH-02b",
+      "type": "+",
+      "title": "Restore drill: the latest dump restores into an empty database with identical row counts",
+      "status": "PASS",
+      "note": "bookings/expenses/users 0/1/2",
+      "ms": 862
+    },
+    {
+      "area": "ARCH-03/04/05/07/12 Runtime configuration",
+      "id": "ARCH-03",
+      "type": "+",
+      "title": "Every long-running service restarts automatically (unless-stopped)",
+      "status": "PASS",
+      "note": "",
+      "ms": 87
+    },
+    {
+      "area": "ARCH-03/04/05/07/12 Runtime configuration",
+      "id": "ARCH-04",
+      "type": "+",
+      "title": "Container logs rotate (json-file, 10 MB × 5) so they cannot fill the disk",
+      "status": "PASS",
+      "note": "",
+      "ms": 82
+    },
+    {
+      "area": "ARCH-03/04/05/07/12 Runtime configuration",
+      "id": "ARCH-05",
+      "type": "+",
+      "title": "Memory limits on every service (fit a 2–4 GB VM); Postgres tuned",
+      "status": "PASS",
+      "note": "total limit 1952 MiB",
+      "ms": 292
+    },
+    {
+      "area": "ARCH-03/04/05/07/12 Runtime configuration",
+      "id": "ARCH-07",
+      "type": "+",
+      "title": "Every long-running service has a healthcheck and is healthy",
+      "status": "PASS",
+      "note": "",
+      "ms": 82
+    },
+    {
+      "area": "ARCH-03/04/05/07/12 Runtime configuration",
+      "id": "ARCH-12",
+      "type": "+",
+      "title": "Least privilege: no-new-privileges on all; read-only rootfs and no capabilities for app containers",
+      "status": "PASS",
+      "note": "",
+      "ms": 174
+    },
+    {
+      "area": "ARCH-03/04/05/07/12 Runtime configuration",
+      "id": "ARCH-PORTS",
+      "type": "−",
+      "title": "Only the TLS edge publishes ports; database, API and web are internal",
+      "status": "PASS",
+      "note": "",
+      "ms": 68
+    },
+    {
+      "area": "ARCH-08/09/10/11 Build & release",
+      "id": "ARCH-08",
+      "type": "+",
+      "title": "All base images are pinned to exact versions",
+      "status": "PASS",
+      "note": "caddy:2.11.9-alpine, postgres:18.6-alpine, node:22.23.4-alpine, nginxinc/nginx-unprivileged:1.27.5-alpine",
+      "ms": 1
+    },
+    {
+      "area": "ARCH-08/09/10/11 Build & release",
+      "id": "ARCH-09",
+      "type": "+",
+      "title": "The app shell revalidates on every load; hashed assets are cached for a year",
+      "status": "PASS",
+      "note": "",
+      "ms": 3
+    },
+    {
+      "area": "ARCH-08/09/10/11 Build & release",
+      "id": "ARCH-10",
+      "type": "+",
+      "title": "No fonts are inlined as data: URIs (they would be blocked by the CSP)",
+      "status": "PASS",
+      "note": "",
+      "ms": 6
+    },
+    {
+      "area": "ARCH-08/09/10/11 Build & release",
+      "id": "ARCH-11",
+      "type": "+",
+      "title": "The worker stops gracefully on SIGTERM well within the grace period and comes back healthy",
+      "status": "PASS",
+      "note": "stopped in 216 ms",
+      "ms": 2111
+    },
+    {
+      "area": "ARCH-08/09/10/11 Build & release",
+      "id": "ARCH-13",
+      "type": "+",
+      "title": "CI runs install, type-check, unit tests and builds on every push",
+      "status": "PASS",
+      "note": "",
+      "ms": 1
+    }
+  ]
+}

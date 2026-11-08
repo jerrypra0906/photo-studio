@@ -1,6 +1,6 @@
 {
   "suite": "security",
-  "ranAt": "2026-11-06T17:31:34.425Z",
+  "ranAt": "2026-11-08T13:33:17.941Z",
   "baseUrl": "http://localhost:8080",
   "results": [
     {
@@ -10,7 +10,7 @@
       "title": "All 13 data endpoints refuse anonymous requests (401)",
       "status": "PASS",
       "note": "",
-      "ms": 13
+      "ms": 19
     },
     {
       "area": "A. Authentication & session",
@@ -19,7 +19,7 @@
       "title": "JWT signed with a different secret is rejected",
       "status": "PASS",
       "note": "",
-      "ms": 11
+      "ms": 4
     },
     {
       "area": "A. Authentication & session",
@@ -37,7 +37,7 @@
       "title": "Tampered payload (Staff token edited to role OWNER, original signature) is rejected",
       "status": "PASS",
       "note": "",
-      "ms": 2
+      "ms": 1
     },
     {
       "area": "A. Authentication & session",
@@ -46,7 +46,7 @@
       "title": "Expired access token is rejected",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 2
     },
     {
       "area": "A. Authentication & session",
@@ -55,7 +55,7 @@
       "title": "Token confusion: the Google OAuth \"state\" token cannot be used as an API access token",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 3
     },
     {
       "area": "A. Authentication & session",
@@ -64,7 +64,7 @@
       "title": "Login brute force: 6th attempt locked (via nginx, X-Forwarded-For spoofing ignored)",
       "status": "PASS",
       "note": "",
-      "ms": 187
+      "ms": 38445
     },
     {
       "area": "A. Authentication & session",
@@ -73,7 +73,7 @@
       "title": "Login brute force cannot be bypassed by rotating source IPs (API not exposed; per-account lockout)",
       "status": "PASS",
       "note": "",
-      "ms": 167
+      "ms": 285
     },
     {
       "area": "A. Authentication & session",
@@ -82,7 +82,7 @@
       "title": "Password spraying: many accounts × 1 password is throttled globally",
       "status": "PASS",
       "note": "",
-      "ms": 40
+      "ms": 123
     },
     {
       "area": "A. Authentication & session",
@@ -90,8 +90,8 @@
       "type": "−",
       "title": "No account enumeration: same message and similar timing for existing vs unknown email",
       "status": "PASS",
-      "note": "avg 33 ms vs 27 ms",
-      "ms": 60468
+      "note": "avg 40 ms vs 32 ms",
+      "ms": 60523
     },
     {
       "area": "A. Authentication & session",
@@ -100,7 +100,7 @@
       "title": "Refresh-token theft: replaying a rotated token after the grace window kills the whole session family",
       "status": "PASS",
       "note": "",
-      "ms": 31054
+      "ms": 31061
     },
     {
       "area": "A. Authentication & session",
@@ -109,7 +109,7 @@
       "title": "Refresh cookie is HttpOnly, SameSite=Strict, scoped to /api/v1/auth",
       "status": "PASS",
       "note": "Secure flag off (COOKIE_SECURE=false for local http) — must be true in production",
-      "ms": 46
+      "ms": 51
     },
     {
       "area": "A. Authentication & session",
@@ -118,7 +118,7 @@
       "title": "Deactivating a user ends their access immediately",
       "status": "PASS",
       "note": "",
-      "ms": 29295
+      "ms": 29315
     },
     {
       "area": "A. Authentication & session",
@@ -127,7 +127,7 @@
       "title": "Password change revokes existing refresh sessions",
       "status": "PASS",
       "note": "",
-      "ms": 88
+      "ms": 110
     },
     {
       "area": "A. Authentication & session",
@@ -136,16 +136,16 @@
       "title": "Weak passwords are rejected for new users (min length)",
       "status": "PASS",
       "note": "min 8 chars; no complexity/breached-password check",
-      "ms": 2
+      "ms": 3
     },
     {
       "area": "B. Authorization (vertical / horizontal)",
       "id": "SEC-B1",
       "type": "−",
-      "title": "Staff → 23 Owner-only endpoints all return 403 with no data",
+      "title": "Staff → 24 Owner-only endpoints all return 403 with no data",
       "status": "PASS",
       "note": "",
-      "ms": 40
+      "ms": 47
     },
     {
       "area": "B. Authorization (vertical / horizontal)",
@@ -154,7 +154,7 @@
       "title": "Staff cannot promote themselves (PATCH own user → 403)",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 4
     },
     {
       "area": "B. Authorization (vertical / horizontal)",
@@ -163,7 +163,7 @@
       "title": "Staff view of a booking hides finance data (linked costs, margin)",
       "status": "PASS",
       "note": "",
-      "ms": 8
+      "ms": 10
     },
     {
       "area": "B. Authorization (vertical / horizontal)",
@@ -190,7 +190,7 @@
       "title": "Mass assignment: server-owned fields in the body are ignored (status, total, paid, number, createdBy)",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 6
     },
     {
       "area": "B. Authorization (vertical / horizontal)",
@@ -208,7 +208,70 @@
       "title": "Secrets are never returned: Google refresh token absent from /settings (Owner and Staff)",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 7
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U1",
+      "type": "−",
+      "title": "Staff cannot escalate through the self-service profile (role/email/active in the body are ignored)",
+      "status": "PASS",
+      "note": "",
+      "ms": 6
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U2",
+      "type": "−",
+      "title": "Mass assignment on registration: id, passwordHash, deletedAt, lastLoginAt in the body are ignored",
+      "status": "PASS",
+      "note": "",
+      "ms": 239
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U3",
+      "type": "−",
+      "title": "Brute-forcing the current password on /auth/password is locked after 5 tries",
+      "status": "PASS",
+      "note": "",
+      "ms": 195
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U4",
+      "type": "−",
+      "title": "Owner password resets must meet the policy too",
+      "status": "PASS",
+      "note": "",
+      "ms": 27
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U5",
+      "type": "−",
+      "title": "A removed user loses access at once: access token, refresh cookie and login all fail",
+      "status": "PASS",
+      "note": "",
+      "ms": 83
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U6",
+      "type": "−",
+      "title": "Audit trails are append-only for the application role (UPDATE/DELETE denied)",
+      "status": "PASS",
+      "note": "",
+      "ms": 733
+    },
+    {
+      "area": "B2. User management & session attacks",
+      "id": "SEC-U7",
+      "type": "−",
+      "title": "Refresh flooding with one stolen cookie is throttled per session, without locking out other sessions",
+      "status": "PASS",
+      "note": "10 of 40 throttled",
+      "ms": 108
     },
     {
       "area": "C. Injection & output encoding",
@@ -217,7 +280,7 @@
       "title": "SQL injection: 5 payloads × search/filter params — no error, no leak, no delay",
       "status": "PASS",
       "note": "",
-      "ms": 164
+      "ms": 148
     },
     {
       "area": "C. Injection & output encoding",
@@ -226,7 +289,7 @@
       "title": "SQL injection via path IDs is blocked by UUID validation (400)",
       "status": "PASS",
       "note": "",
-      "ms": 4
+      "ms": 3
     },
     {
       "area": "C. Injection & output encoding",
@@ -234,8 +297,8 @@
       "type": "−",
       "title": "Stored XSS payloads are stored as plain text (rendered escaped by React — checked in browser)",
       "status": "PASS",
-      "note": "booking 01a1b1ea-65e0-74e7-8020-c142f189471c",
-      "ms": 5
+      "note": "booking 01a1bb5c-f7ae-7e23-8b75-016a9ff5ec20",
+      "ms": 7
     },
     {
       "area": "C. Injection & output encoding",
@@ -244,7 +307,7 @@
       "title": "Template injection: client data containing {placeholders} is not expanded",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 8
     },
     {
       "area": "C. Injection & output encoding",
@@ -253,7 +316,7 @@
       "title": "CSV/formula injection: a client named =HYPERLINK(...) is neutralised in the CSV export",
       "status": "PASS",
       "note": "",
-      "ms": 10
+      "ms": 11
     },
     {
       "area": "C. Injection & output encoding",
@@ -261,8 +324,8 @@
       "type": "−",
       "title": "Header injection: CR/LF in the client name cannot inject headers into the PDF download",
       "status": "PASS",
-      "note": "inline; filename=\"Invoice_a_X_Injected_1_2068-05-15.pdf\"",
-      "ms": 34
+      "note": "inline; filename=\"Invoice_a_X_Injected_1_2087-04-17.pdf\"",
+      "ms": 41
     },
     {
       "area": "C. Injection & output encoding",
@@ -271,7 +334,7 @@
       "title": "wa.me link parameters are URL-encoded (no parameter smuggling via message text)",
       "status": "PASS",
       "note": "",
-      "ms": 6
+      "ms": 11
     },
     {
       "area": "D. File upload",
@@ -280,7 +343,7 @@
       "title": "HTML/SVG/script files are rejected even when declared as images",
       "status": "PASS",
       "note": "",
-      "ms": 5
+      "ms": 8
     },
     {
       "area": "D. File upload",
@@ -298,7 +361,7 @@
       "title": "JPEG/HTML polyglot is stored under a random key and served with nosniff (no HTML execution)",
       "status": "PASS",
       "note": "",
-      "ms": 106
+      "ms": 122
     },
     {
       "area": "E. Browser-side protections (CORS, CSRF, clickjacking, CSP)",
@@ -316,7 +379,7 @@
       "title": "CSRF: state-changing calls need a Bearer token (cookies alone are not enough)",
       "status": "PASS",
       "note": "",
-      "ms": 27
+      "ms": 31
     },
     {
       "area": "E. Browser-side protections (CORS, CSRF, clickjacking, CSP)",
@@ -360,8 +423,8 @@
       "type": "−",
       "title": "API rate limit (TD §3.4: 120 req/min per user) throttles a burst of 300 requests",
       "status": "PASS",
-      "note": "211 of 300 throttled (limit 120/min), Retry-After 60 s",
-      "ms": 133
+      "note": "214 of 300 throttled (limit 120/min), Retry-After 59 s",
+      "ms": 132
     },
     {
       "area": "F. Abuse, DoS & error handling",
@@ -370,7 +433,7 @@
       "title": "Oversized JSON body (300 KB) is refused with 413",
       "status": "PASS",
       "note": "",
-      "ms": 3
+      "ms": 4
     },
     {
       "area": "F. Abuse, DoS & error handling",
@@ -379,7 +442,7 @@
       "title": "Huge arrays are refused cheaply (add-on list capped at 30)",
       "status": "PASS",
       "note": "1.500-item array (~90 KB) rejected in 2 ms",
-      "ms": 2
+      "ms": 3
     },
     {
       "area": "F. Abuse, DoS & error handling",
@@ -388,7 +451,7 @@
       "title": "Malformed JSON and unknown routes return clean errors (no stack trace, no framework banner)",
       "status": "PASS",
       "note": "",
-      "ms": 9
+      "ms": 3
     },
     {
       "area": "F. Abuse, DoS & error handling",
@@ -415,7 +478,7 @@
       "title": "Login-attempt table cannot be grown without bound by unauthenticated requests",
       "status": "PASS",
       "note": "",
-      "ms": 354
+      "ms": 278
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -424,7 +487,7 @@
       "title": "Database is not reachable from outside the Docker network",
       "status": "PASS",
       "note": "published on 127.0.0.1:5433 only",
-      "ms": 60
+      "ms": 59
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -433,7 +496,7 @@
       "title": "Database rejects default credentials",
       "status": "PASS",
       "note": "",
-      "ms": 204
+      "ms": 229
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -442,7 +505,7 @@
       "title": "Application DB role is least-privilege (not superuser)",
       "status": "PASS",
       "note": "API/worker connect as jes_app: DML only, audit tables append-only",
-      "ms": 391
+      "ms": 464
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -451,7 +514,7 @@
       "title": "Passwords are Argon2id hashes; Google token encrypted at rest (AES-256-GCM)",
       "status": "PASS",
       "note": "refresh tokens stored as SHA-256 hashes; Google token encryption verified by code review",
-      "ms": 94
+      "ms": 101
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -460,7 +523,7 @@
       "title": "Containers run as non-root",
       "status": "PASS",
       "note": "",
-      "ms": 295
+      "ms": 268
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -469,7 +532,7 @@
       "title": "No secrets baked into images (.env excluded; secrets only via runtime env)",
       "status": "PASS",
       "note": "",
-      "ms": 378
+      "ms": 390
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -487,7 +550,7 @@
       "title": "Production dependencies have no known high/critical advisories (npm audit)",
       "status": "PASS",
       "note": "",
-      "ms": 702
+      "ms": 727
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -496,7 +559,7 @@
       "title": "Audit trail: booking changes and expense edits/deletes are logged with user and time",
       "status": "PASS",
       "note": "no audit for settings/master/user changes, logins or month close by actor beyond closed_by",
-      "ms": 213
+      "ms": 253
     },
     {
       "area": "G. Infrastructure, data & secrets",
@@ -505,7 +568,7 @@
       "title": "Logs do not contain credentials or tokens",
       "status": "PASS",
       "note": "",
-      "ms": 70
+      "ms": 88
     }
   ]
 }
