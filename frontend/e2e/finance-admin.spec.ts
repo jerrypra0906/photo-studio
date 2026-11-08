@@ -10,31 +10,54 @@ test.afterAll(async () => context.close());
 
 const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
 
-test.describe('Owner dashboard (FR-23, FR-28)', () => {
-  test('DASH+ renders the hero, both charts, summaries and no horizontal scroll', async () => {
-    await page.goto('/finance');
-    await expect(page.getByText(/^Laba bersih /).first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Pendapatan vs pengeluaran' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Tren laba bersih' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /^Ringkasan \d+ bulan/ })).toBeVisible();
+test.describe('Keuangan › Ringkasan (FR-23, FR-28)', () => {
+  const last = () => { const d = new Date(Date.now() + 7 * 3600e3); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); };
+
+  test('DASH+ one month answers the four questions: result, comparison, best package, biggest expense', async () => {
+    await page.goto(`/finance?month=${last()}`);
+    await expect(page.getByText(/^Laba bersih · /)).toBeVisible();
+    for (const h of ['Dibanding bulan lain', 'Paket terbaik', 'Pengeluaran terbesar']) await expect(page.getByRole('heading', { name: h })).toBeVisible();
+    await expect(page.getByText('Peringkat', { exact: true })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 
-  test('DASH+ tapping a month shows its tooltip; the table view lists every month', async () => {
-    const first = page.getByRole('button', { name: /: lihat detail$/ }).first();
-    await first.scrollIntoViewIfNeeded();
-    await first.click();
-    await expect(page.getByRole('status').filter({ hasText: 'Pendapatan' })).toBeVisible();
-    await page.getByRole('button', { name: 'Lihat tabel' }).click();
-    await expect(page.getByRole('table')).toBeVisible();
-    expect(await page.getByRole('table').locator('tbody tr').count()).toBeGreaterThanOrEqual(6);
+  test('DASH+ no figure is repeated across tabs: Pengeluaran shows no revenue or profit', async () => {
+    await page.getByRole('link', { name: 'Pengeluaran', exact: true }).click();
+    await expect(page.getByText('Total pengeluaran')).toBeVisible();
+    await expect(page.getByText(/^Laba bersih/)).toHaveCount(0);
+    await expect(page.getByText('Pendapatan', { exact: true })).toHaveCount(0);
   });
 
-  test('DASH+ switching to 6 months and Collected basis reloads the view', async () => {
-    await page.getByText('6 bln', { exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Ringkasan 6 bulan' })).toBeVisible();
-    await page.getByText('Diterima', { exact: true }).click();
-    await expect(page.getByText(/· diterima$/)).toBeVisible();
+  test('DASH+ the selected month carries across Ringkasan, Pengeluaran and Laporan', async () => {
+    const m = last();
+    await expect(page).toHaveURL(new RegExp(`/finance/expenses\\?month=${m}`));
+    await page.getByRole('link', { name: 'Laporan', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/finance/recap\\?month=${m}`));
+    await expect(page.getByRole('heading', { name: /^Laporan laba rugi · / })).toBeVisible();
+    await page.getByRole('link', { name: 'Ringkasan', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/finance\\?month=${m}`));
+  });
+
+  test('DASH+ tapping a month in the comparison chart switches the whole page to that month', async () => {
+    const col = page.getByRole('button', { name: /: lihat detail$/ }).first();
+    await col.scrollIntoViewIfNeeded();
+    await col.click();
+    await expect(page).not.toHaveURL(new RegExp(`month=${last()}$`));
+    await expect(page.getByRole('status').filter({ hasText: 'Pendapatan' })).toBeVisible();
+  });
+
+  test('DASH+ tapping the biggest expense opens Pengeluaran filtered to that category', async () => {
+    await page.goto(`/finance?month=${last()}`);
+    const top = page.getByRole('heading', { name: 'Pengeluaran terbesar' }).locator('xpath=ancestor::div[contains(@class,"space-y-3")][1]').getByRole('link').first();
+    await top.scrollIntoViewIfNeeded();
+    await top.click();
+    await expect(page).toHaveURL(/\/finance\/expenses\?month=\d{4}-\d{2}&categoryId=/);
+    await expect(page.getByRole('button', { name: 'Semua', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('DASH− an empty month says so instead of showing broken charts', async () => {
+    await page.goto('/finance?month=1971-01');
+    await expect(page.getByText('Belum ada transaksi di Januari 1971.')).toBeVisible();
   });
 });
 

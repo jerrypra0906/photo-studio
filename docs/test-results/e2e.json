@@ -143,12 +143,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 411,
+                      "duration": 456,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:39.890Z",
+                      "startTime": "2026-11-08T14:38:37.889Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -195,12 +195,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4363,
+                      "duration": 4773,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:40.519Z",
+                      "startTime": "2026-11-08T14:38:38.580Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -247,12 +247,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 307,
+                      "duration": 306,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:44.886Z",
+                      "startTime": "2026-11-08T14:38:43.357Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -299,12 +299,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 224,
+                      "duration": 222,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:45.196Z",
+                      "startTime": "2026-11-08T14:38:43.667Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -351,12 +351,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 517,
+                      "duration": 537,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:45.425Z",
+                      "startTime": "2026-11-08T14:38:43.894Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -403,12 +403,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 289,
+                      "duration": 325,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:45.945Z",
+                      "startTime": "2026-11-08T14:38:44.436Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -455,12 +455,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 427,
+                      "duration": 431,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:46.240Z",
+                      "startTime": "2026-11-08T14:38:44.764Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -524,12 +524,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 268,
+                      "duration": 231,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:29:46.682Z",
+                      "startTime": "2026-11-08T14:38:45.206Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -581,7 +581,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:10.429Z",
+                      "startTime": "2026-11-08T14:38:45.534Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -628,12 +628,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 237,
+                      "duration": 239,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:10.456Z",
+                      "startTime": "2026-11-08T14:38:45.561Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -680,12 +680,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 87,
+                      "duration": 84,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:10.698Z",
+                      "startTime": "2026-11-08T14:38:45.804Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -732,12 +732,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 226,
+                      "duration": 228,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:10.789Z",
+                      "startTime": "2026-11-08T14:38:45.892Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -792,12 +792,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 119,
+                      "duration": 133,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:11.019Z",
+                      "startTime": "2026-11-08T14:38:46.123Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -844,12 +844,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 124,
+                      "duration": 223,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:11.144Z",
+                      "startTime": "2026-11-08T14:38:46.261Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -896,12 +896,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 231,
+                      "duration": 230,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:11.272Z",
+                      "startTime": "2026-11-08T14:38:46.489Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -948,12 +948,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 202,
+                      "duration": 189,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:11.507Z",
+                      "startTime": "2026-11-08T14:38:46.723Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1000,12 +1000,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 224,
+                      "duration": 205,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:11.718Z",
+                      "startTime": "2026-11-08T14:38:46.918Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1060,12 +1060,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 142,
+                      "duration": 195,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:11.946Z",
+                      "startTime": "2026-11-08T14:38:47.127Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1112,12 +1112,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 386,
+                      "duration": 395,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:12.094Z",
+                      "startTime": "2026-11-08T14:38:47.326Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1151,13 +1151,13 @@
       "specs": [],
       "suites": [
         {
-          "title": "Owner dashboard (FR-23, FR-28)",
+          "title": "Keuangan › Ringkasan (FR-23, FR-28)",
           "file": "finance-admin.spec.ts",
           "line": 13,
           "column": 6,
           "specs": [
             {
-              "title": "DASH+ renders the hero, both charts, summaries and no horizontal scroll",
+              "title": "DASH+ one month answers the four questions: result, comparison, best package, biggest expense",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1181,12 +1181,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 109,
+                      "duration": 112,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:12.658Z",
+                      "startTime": "2026-11-08T14:38:47.908Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1203,13 +1203,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "bba8560e2c1c7c964d6c-91d17dfc32b1f28ca197",
+              "id": "bba8560e2c1c7c964d6c-8b5a6becc7db8d9873e3",
               "file": "finance-admin.spec.ts",
-              "line": 14,
+              "line": 16,
               "column": 3
             },
             {
-              "title": "DASH+ tapping a month shows its tooltip; the table view lists every month",
+              "title": "DASH+ no figure is repeated across tabs: Pengeluaran shows no revenue or profit",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1233,12 +1233,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 120,
+                      "duration": 99,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:12.862Z",
+                      "startTime": "2026-11-08T14:38:48.118Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1255,73 +1255,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "bba8560e2c1c7c964d6c-85c70678db886d951d99",
+              "id": "bba8560e2c1c7c964d6c-849d0f00a8da825c33ec",
               "file": "finance-admin.spec.ts",
-              "line": 23,
+              "line": 24,
               "column": 3
             },
             {
-              "title": "DASH+ switching to 6 months and Collected basis reloads the view",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 60000,
-                  "annotations": [
-                    {
-                      "type": "serial",
-                      "location": {
-                        "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
-                        "line": 0,
-                        "column": 0
-                      }
-                    }
-                  ],
-                  "expectedStatus": "passed",
-                  "projectId": "",
-                  "projectName": "",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 101,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-11-08T13:30:12.986Z",
-                      "annotations": [
-                        {
-                          "type": "serial",
-                          "location": {
-                            "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
-                            "line": 0,
-                            "column": 0
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "bba8560e2c1c7c964d6c-11d2e3a16dc99ea3d9cf",
-              "file": "finance-admin.spec.ts",
-              "line": 33,
-              "column": 3
-            }
-          ]
-        },
-        {
-          "title": "Expenses & recap (US-22, US-26, US-27)",
-          "file": "finance-admin.spec.ts",
-          "line": 41,
-          "column": 6,
-          "specs": [
-            {
-              "title": "EXP− amount 0 keeps Save disabled; − a future date shows an error",
+              "title": "DASH+ the selected month carries across Ringkasan, Pengeluaran and Laporan",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1350,7 +1290,223 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.091Z",
+                      "startTime": "2026-11-08T14:38:48.221Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                            "line": 0,
+                            "column": 0
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bba8560e2c1c7c964d6c-0cb1add82bb1d4382e2d",
+              "file": "finance-admin.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "DASH+ tapping a month in the comparison chart switches the whole page to that month",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                        "line": 0,
+                        "column": 0
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 100,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-08T14:38:48.319Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                            "line": 0,
+                            "column": 0
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bba8560e2c1c7c964d6c-29703bba1251dc74a5a1",
+              "file": "finance-admin.spec.ts",
+              "line": 41,
+              "column": 3
+            },
+            {
+              "title": "DASH+ tapping the biggest expense opens Pengeluaran filtered to that category",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                        "line": 0,
+                        "column": 0
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 172,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-08T14:38:48.423Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                            "line": 0,
+                            "column": 0
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bba8560e2c1c7c964d6c-19600afa876d0a34c825",
+              "file": "finance-admin.spec.ts",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "DASH− an empty month says so instead of showing broken charts",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                        "line": 0,
+                        "column": 0
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 59,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-08T14:38:48.600Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                            "line": 0,
+                            "column": 0
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bba8560e2c1c7c964d6c-e074ac9939129f830063",
+              "file": "finance-admin.spec.ts",
+              "line": 58,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Expenses & recap (US-22, US-26, US-27)",
+          "file": "finance-admin.spec.ts",
+          "line": 64,
+          "column": 6,
+          "specs": [
+            {
+              "title": "EXP− amount 0 keeps Save disabled; − a future date shows an error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/jerrypratamahakim/Claude/Jes Space Studio/frontend/e2e/finance-admin.spec.ts",
+                        "line": 0,
+                        "column": 0
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 108,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-08T14:38:48.664Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1369,7 +1525,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-69e2bf5fc2416966f14a",
               "file": "finance-admin.spec.ts",
-              "line": 42,
+              "line": 65,
               "column": 3
             },
             {
@@ -1397,12 +1553,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 299,
+                      "duration": 288,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.189Z",
+                      "startTime": "2026-11-08T14:38:48.777Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1421,7 +1577,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-031e91d19cfce1cc700c",
               "file": "finance-admin.spec.ts",
-              "line": 53,
+              "line": 76,
               "column": 3
             },
             {
@@ -1449,12 +1605,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 114,
+                      "duration": 111,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.493Z",
+                      "startTime": "2026-11-08T14:38:49.071Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1473,7 +1629,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-cdd46179346c73db9c23",
               "file": "finance-admin.spec.ts",
-              "line": 69,
+              "line": 92,
               "column": 3
             }
           ]
@@ -1481,7 +1637,7 @@
         {
           "title": "Admin masters & settings (US-18 … US-21)",
           "file": "finance-admin.spec.ts",
-          "line": 78,
+          "line": 101,
           "column": 6,
           "specs": [
             {
@@ -1509,12 +1665,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 124,
+                      "duration": 142,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.613Z",
+                      "startTime": "2026-11-08T14:38:49.186Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1533,7 +1689,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-62bdeb34f4cfe7cf2dcf",
               "file": "finance-admin.spec.ts",
-              "line": 79,
+              "line": 102,
               "column": 3
             },
             {
@@ -1561,12 +1717,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 155,
+                      "duration": 138,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.742Z",
+                      "startTime": "2026-11-08T14:38:49.333Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1585,7 +1741,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-09b90a388ee9861b6a05",
               "file": "finance-admin.spec.ts",
-              "line": 88,
+              "line": 111,
               "column": 3
             },
             {
@@ -1613,12 +1769,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 64,
+                      "duration": 65,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.902Z",
+                      "startTime": "2026-11-08T14:38:49.476Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1637,7 +1793,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-47af7cb46339b813f9ee",
               "file": "finance-admin.spec.ts",
-              "line": 96,
+              "line": 119,
               "column": 3
             }
           ]
@@ -1645,7 +1801,7 @@
         {
           "title": "User management (register / edit / remove)",
           "file": "finance-admin.spec.ts",
-          "line": 104,
+          "line": 127,
           "column": 6,
           "specs": [
             {
@@ -1673,12 +1829,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 131,
+                      "duration": 149,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:13.971Z",
+                      "startTime": "2026-11-08T14:38:49.546Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1697,7 +1853,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-e0be716f83f37eaf9bbc",
               "file": "finance-admin.spec.ts",
-              "line": 107,
+              "line": 130,
               "column": 3
             },
             {
@@ -1725,12 +1881,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 135,
+                      "duration": 133,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:14.106Z",
+                      "startTime": "2026-11-08T14:38:49.701Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1749,7 +1905,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-d38cfd56443179115313",
               "file": "finance-admin.spec.ts",
-              "line": 123,
+              "line": 146,
               "column": 3
             },
             {
@@ -1777,12 +1933,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 160,
+                      "duration": 163,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:14.247Z",
+                      "startTime": "2026-11-08T14:38:49.839Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1801,7 +1957,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-d28d08b0dc696d113065",
               "file": "finance-admin.spec.ts",
-              "line": 130,
+              "line": 153,
               "column": 3
             },
             {
@@ -1829,12 +1985,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 137,
+                      "duration": 152,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:14.412Z",
+                      "startTime": "2026-11-08T14:38:50.006Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1853,7 +2009,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-351d8617a5d35a4610fa",
               "file": "finance-admin.spec.ts",
-              "line": 142,
+              "line": 165,
               "column": 3
             },
             {
@@ -1881,12 +2037,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 36,
+                      "duration": 34,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:14.554Z",
+                      "startTime": "2026-11-08T14:38:50.161Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1905,7 +2061,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-bd99bc730c7808f4a2ce",
               "file": "finance-admin.spec.ts",
-              "line": 151,
+              "line": 174,
               "column": 3
             },
             {
@@ -1933,12 +2089,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 160,
+                      "duration": 178,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:14.594Z",
+                      "startTime": "2026-11-08T14:38:50.200Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -1957,7 +2113,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-a703944fadf3466094dd",
               "file": "finance-admin.spec.ts",
-              "line": 159,
+              "line": 182,
               "column": 3
             }
           ]
@@ -1965,7 +2121,7 @@
         {
           "title": "My account (self-service)",
           "file": "finance-admin.spec.ts",
-          "line": 170,
+          "line": 193,
           "column": 6,
           "specs": [
             {
@@ -1993,12 +2149,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 894,
+                      "duration": 943,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:14.758Z",
+                      "startTime": "2026-11-08T14:38:50.383Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2017,7 +2173,7 @@
               ],
               "id": "bba8560e2c1c7c964d6c-781aa1ba688fb76c13db",
               "file": "finance-admin.spec.ts",
-              "line": 171,
+              "line": 194,
               "column": 3
             }
           ]
@@ -2067,7 +2223,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:15.796Z",
+                      "startTime": "2026-11-08T14:38:51.471Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2119,7 +2275,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:15.970Z",
+                      "startTime": "2026-11-08T14:38:51.618Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2166,12 +2322,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 44,
+                      "duration": 43,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.014Z",
+                      "startTime": "2026-11-08T14:38:51.661Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2218,12 +2374,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 34,
+                      "duration": 33,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.062Z",
+                      "startTime": "2026-11-08T14:38:51.709Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2270,12 +2426,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 35,
+                      "duration": 34,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.100Z",
+                      "startTime": "2026-11-08T14:38:51.747Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2322,12 +2478,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 32,
+                      "duration": 37,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.139Z",
+                      "startTime": "2026-11-08T14:38:51.787Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2374,12 +2530,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 206,
+                      "duration": 190,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.175Z",
+                      "startTime": "2026-11-08T14:38:51.828Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2426,12 +2582,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 196,
+                      "duration": 200,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.386Z",
+                      "startTime": "2026-11-08T14:38:52.023Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2478,12 +2634,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 194,
+                      "duration": 209,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.619Z",
+                      "startTime": "2026-11-08T14:38:52.258Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2530,12 +2686,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 41,
+                      "duration": 39,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.821Z",
+                      "startTime": "2026-11-08T14:38:52.471Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2590,12 +2746,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2872,
+                      "duration": 2881,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:16.867Z",
+                      "startTime": "2026-11-08T14:38:52.515Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2642,12 +2798,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2881,
+                      "duration": 2903,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:19.747Z",
+                      "startTime": "2026-11-08T14:38:55.406Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2694,12 +2850,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 429,
+                      "duration": 408,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-08T13:30:22.642Z",
+                      "startTime": "2026-11-08T14:38:58.321Z",
                       "annotations": [
                         {
                           "type": "serial",
@@ -2728,9 +2884,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-11-08T13:29:39.657Z",
-    "duration": 43625.407999999996,
-    "expected": 48,
+    "startTime": "2026-11-08T14:38:37.653Z",
+    "duration": 21357.736,
+    "expected": 51,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

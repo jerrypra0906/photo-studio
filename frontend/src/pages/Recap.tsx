@@ -3,10 +3,10 @@ import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatRp, monthLabelId, shortDateId, wibMonth } from '@jes/shared';
 import { ApiError, api } from '../api';
-import { Banner, Button, Card, Chip, Field, Input, Money, Page, PageHeader, Sheet, Spinner, cx, useToast } from '../ui';
-import { ExpenseRow, FinanceTabs, MonthSwitcher, useMonthParam } from './Finance';
+import { Banner, Button, Card, Field, Input, Money, Page, Sheet, Spinner, cx, useToast } from '../ui';
+import { ExpenseRow, FinanceHeader, useMonthParam } from './Finance';
 
-/** S18 Monthly recap (L2-4.3, PRD §6.5). */
+/** Laporan: the formal monthly statement (L2-4.3, PRD §6.5) — income, expenses, net, receivables, export, close. */
 export default function Recap() {
   const [month, setMonth] = useMonthParam();
   const [basis, setBasis] = useState<'' | 'BILLED' | 'COLLECTED'>('');
@@ -42,65 +42,63 @@ export default function Recap() {
     finally { setBusy(false); }
   };
 
-  const maxCat = Math.max(1, ...(r?.expenses.byCategory.map((c: any) => c.amount) ?? [1]));
-  const prevDelta = r ? r.netProfit - r.previous.netProfit : 0;
   const empty = r && r.revenue.bookingCount === 0 && r.expenses.total === 0 && r.drafts.count === 0;
+  const effBasis = basis || r?.basis;
 
   return (
     <>
-      <PageHeader title="Keuangan" />
-      <FinanceTabs />
-      <Page>
-        <MonthSwitcher month={month} onChange={setMonth} />
-        <div className="flex gap-2">
-          <Chip active={(basis || r?.basis) === 'BILLED'} onClick={() => setBasis('BILLED')}>Ditagih</Chip>
-          <Chip active={(basis || r?.basis) === 'COLLECTED'} onClick={() => setBasis('COLLECTED')}>Diterima</Chip>
+      <FinanceHeader month={month} onMonth={setMonth} />
+      <Page className="pb-28">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex rounded-full border border-line p-0.5 text-sm" role="group" aria-label="Basis pendapatan">
+            {(['BILLED', 'COLLECTED'] as const).map((b) => (
+              <button key={b} onClick={() => setBasis(b)} aria-pressed={effBasis === b}
+                className={cx('rounded-full px-4 min-h-9', effBasis === b ? 'bg-accent text-accent-ink' : 'text-muted')}>{b === 'BILLED' ? 'Ditagih' : 'Diterima'}</button>
+            ))}
+          </div>
+          <span className="text-xs text-muted text-right">{effBasis === 'COLLECTED' ? 'Uang yang sudah diterima' : 'Nilai semua booking'}</span>
         </div>
         {recap.isLoading || !r ? <Spinner /> : (
           <>
             {r.closed ? <Banner tone="info" action={<button className="underline font-medium" onClick={() => setReopenOpen(true)}>Buka kembali</button>}>Bulan ini sudah ditutup — data terkunci.</Banner> : null}
-            {r.drafts.count ? <Banner tone="warn" action={<Link to="/finance/expenses" className="underline font-medium">Tinjau</Link>}>{r.drafts.count} biaya draft ({formatRp(r.drafts.amount)}) belum termasuk</Banner> : null}
+            {r.drafts.count ? <Banner tone="warn" action={<Link to={`/finance/expenses?month=${month}`} className="underline font-medium">Tinjau</Link>}>{r.drafts.count} biaya draft ({formatRp(r.drafts.amount)}) belum termasuk</Banner> : null}
             {empty ? <Banner tone="info">Tidak ada transaksi bulan ini.</Banner> : null}
 
-            {/* Net profit first (PRD §8.6) */}
-            <Card className="text-center py-6">
-              <div className="text-sm text-muted">Laba bersih{r.marginPct != null ? ` · margin ${r.marginPct}%` : ''}</div>
-              <Money value={r.netProfit} className={cx('font-display text-5xl font-semibold tracking-tight block my-1', r.netProfit < 0 ? 'text-bad' : 'text-ok')} />
-              {r.netProfit < 0 ? <div className="text-sm text-bad">Rugi {formatRp(-r.netProfit)}</div> : null}
-              <div className="text-sm text-muted">vs {monthLabelId(r.previous.month)}: <span className={prevDelta < 0 ? 'text-bad' : 'text-ok'}>{prevDelta >= 0 ? '+' : ''}{formatRp(prevDelta)}</span></div>
-            </Card>
-
-            <Card className="space-y-2">
-              <div className="flex justify-between font-semibold"><span>Pendapatan ({r.basis === 'BILLED' ? 'ditagih' : 'diterima'})</span><Money value={r.revenue.total} /></div>
+            {/* the statement: income, expenses, net — one table, every line tappable for its detail */}
+            <Card className="space-y-1">
+              <h2 className="font-semibold pb-1">Laporan laba rugi · {monthLabelId(month)}</h2>
+              <Head label="Pendapatan" />
               {r.revenue.byType.map((t: any) => (
-                <Row key={t.name} label={`${t.name} (${t.count} booking)`} value={t.amount} onClick={() => setDrill({ title: t.name, kind: 'type', key: t.name })} />
+                <Row key={t.name} label={`${t.name} · ${t.count} booking`} value={t.amount} onClick={() => setDrill({ title: t.name, kind: 'type', key: t.name })} />
               ))}
               <Row label="Add-on" value={r.revenue.addons} onClick={() => setDrill({ title: 'Add-on', kind: 'addons' })} />
               {r.revenue.adjustments ? <Row label="Penyesuaian harga" value={r.revenue.adjustments} /> : null}
               {r.revenue.uncollected ? <Row label="Belum diterima" value={-r.revenue.uncollected} /> : null}
-              {r.revenue.upcoming ? <p className="text-xs text-muted">Termasuk {formatRp(r.revenue.upcoming)} dari sesi yang belum berlangsung.</p> : null}
-            </Card>
+              <Total label="Total pendapatan" value={r.revenue.total} />
 
-            <Card className="space-y-3">
-              <div className="flex justify-between font-semibold"><span>Pengeluaran</span><span className="tabular">−{formatRp(r.expenses.total)}</span></div>
-              {r.expenses.byCategory.length === 0 ? <p className="text-sm text-muted">Belum ada pengeluaran terkonfirmasi.</p> : null}
+              <Head label="Pengeluaran" />
+              {r.expenses.byCategory.length === 0 ? <p className="text-sm text-muted py-1">Belum ada pengeluaran terkonfirmasi.</p> : null}
               {r.expenses.byCategory.map((c: any) => (
-                <button key={c.id} className="w-full text-left space-y-1" onClick={() => setDrill({ title: c.name, kind: 'cat', key: c.id })}>
-                  <div className="flex justify-between text-sm"><span>{c.name} <span className="text-muted">({c.count})</span></span><span className="tabular">−{formatRp(c.amount)}</span></div>
-                  <div className="h-2 rounded-full bg-sunken overflow-hidden"><div className="h-full bg-accent rounded-full" style={{ width: `${(c.amount / maxCat) * 100}%` }} /></div>
-                </button>
+                <Row key={c.id} label={`${c.name} · ${c.count}×`} value={-c.amount} onClick={() => setDrill({ title: c.name, kind: 'cat', key: c.id })} />
               ))}
+              <Total label="Total pengeluaran" value={-r.expenses.total} />
+
+              <div className="flex justify-between items-baseline gap-3 border-t-2 border-ink/80 pt-3 mt-2">
+                <span className="font-semibold">{r.netProfit < 0 ? 'Rugi bersih' : 'Laba bersih'}{r.marginPct != null ? <span className="text-muted font-normal text-sm"> · margin {r.marginPct}%</span> : null}</span>
+                <Money value={r.netProfit} className={cx('font-display text-2xl font-semibold', r.netProfit < 0 && 'text-bad')} />
+              </div>
+              {r.revenue.upcoming ? <p className="text-xs text-muted pt-1">Termasuk {formatRp(r.revenue.upcoming)} dari sesi yang belum berlangsung.</p> : null}
             </Card>
 
-            <Card className="space-y-2">
-              <div className="flex justify-between font-semibold"><span>Piutang</span><Money value={r.receivables.total} /></div>
+            <section id="piutang" className="scroll-mt-40"><Card className="space-y-2">
+              <div className="flex justify-between font-semibold"><span>Piutang · belum lunas</span><Money value={r.receivables.total} /></div>
               {r.receivables.items.length === 0 ? <p className="text-sm text-muted">Semua sudah lunas.</p> : r.receivables.items.map((x: any) => (
                 <Link key={x.id} to={`/bookings/${x.id}`} className="flex justify-between gap-2 text-sm min-h-11 items-center border-t border-line first:border-0">
                   <span className="truncate">{shortDateId(x.startAt)} · {x.clientName} <span className="text-muted">{x.bookingNo}</span></span>
                   <span className="tabular text-accent-text">{formatRp(x.balance)}</span>
                 </Link>
               ))}
-            </Card>
+            </Card></section>
 
             <div className="grid grid-cols-2 gap-3">
               <Button variant="secondary" onClick={() => download('csv')}>Ekspor CSV</Button>
@@ -126,11 +124,23 @@ export default function Recap() {
   );
 }
 
+function Head({ label }: { label: string }) {
+  return <div className="hud text-muted pt-3 first-of-type:pt-0">{label}</div>;
+}
+
 function Row({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
   return (
-    <button disabled={!onClick} onClick={onClick} className="w-full flex justify-between gap-3 text-sm min-h-9 items-center text-left">
-      <span className="text-muted">{label}{onClick ? ' ›' : ''}</span><Money value={value} />
+    <button disabled={!onClick} onClick={onClick} className="w-full flex justify-between gap-3 text-sm min-h-10 items-center text-left pl-3">
+      <span className="text-muted truncate">{label}{onClick ? ' ›' : ''}</span><Money value={value} className="shrink-0" />
     </button>
+  );
+}
+
+function Total({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between gap-3 border-t border-line pt-2 font-semibold">
+      <span>{label}</span><Money value={value} />
+    </div>
   );
 }
 

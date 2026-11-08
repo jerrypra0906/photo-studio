@@ -52,13 +52,15 @@ export interface Series { name: string; color: string; negativeColor?: string }
 export interface ColumnRow { key: string; label: string; values: number[]; muted?: boolean; tooltip: ReactNode }
 
 export function ColumnChart({
-  rows, series, height = 200, reference, labels, ariaLabel,
+  rows, series, height = 200, reference, labels, ariaLabel, onSelect,
 }: {
   rows: ColumnRow[]; series: Series[]; height?: number; ariaLabel: string;
   /** a thin labelled reference line, e.g. the average */
   reference?: { value: number; label: string };
   /** selective direct labels: row key → text shown at that column's data end */
   labels?: Record<string, string>;
+  /** tapping a column also selects that row (e.g. switch the page to that month) */
+  onSelect?: (key: string) => void;
 }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
@@ -126,7 +128,7 @@ export function ColumnChart({
               role="button" aria-label={`${r.label}: lihat detail`} className="outline-none cursor-pointer"
               onPointerEnter={(e) => e.pointerType === 'mouse' && setActive(i)}
               onPointerLeave={(e) => e.pointerType === 'mouse' && setActive(null)}
-              onClick={() => setActive(i)}
+              onClick={() => { setActive(i); onSelect?.(r.key); }}
               onFocus={() => setActive(i)} onBlur={() => setActive(null)} />
           ))}
         </svg>

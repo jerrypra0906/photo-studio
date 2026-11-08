@@ -987,6 +987,16 @@ try {
     assert.equal(t.months.at(-1).month, today.slice(0, 7)); assert.equal(t.months.at(-1).partial, true); assert.equal(t.months[0].partial, false);
     if (t.window.best) assert.notEqual(t.window.best.month, today.slice(0, 7));
   });
+  await R.test('DASH-07', '+', 'Package ranking: revenue per package (incl. add-ons) sums to the month total, sorted, with last month', async () => {
+    const r = (await api(owner, 'GET', `/reports/recap?month=${M}`)).data;
+    assert.equal(r.packages.reduce((a, p) => a + p.revenue, 0), r.revenue.total);
+    assert.deepEqual(r.packages.map((p) => p.revenue), [...r.packages.map((p) => p.revenue)].sort((a, b) => b - a));
+    const pp = r.packages.find((p) => p.name === 'Photo Package');
+    assert.equal(pp.count, 1); assert.equal(pp.revenue, 1373000); assert.equal(pp.avg, 1373000); assert.ok('prevRevenue' in pp);
+    assert.ok(r.topAddons.some((a) => a.name === 'Extra person' && a.revenue === 175000));
+    assert.equal(r.previous.bookings, (await api(owner, 'GET', `/reports/recap?month=${r.previous.month}`)).data.revenue.bookingCount);
+    return r.packages.map((p) => `${p.name} ${p.revenue}`).join(', ');
+  });
   await R.test('DASH-05', '−', 'Months outside 1–36 or a malformed end month → 400', async () => {
     for (const q of ['months=0', 'months=37', 'months=abc', 'end=2026-13', 'end=x']) assert.equal((await api(owner, 'GET', `/reports/trend?${q}`)).status, 400, q);
   });

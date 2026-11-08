@@ -44,12 +44,17 @@ export class RecapService {
         ORDER BY b.start_at`, [month], q);
 
     const byTypeMap = new Map<string, { name: string; count: number; amount: number }>();
+    // package performance: everything a booking of that type brought in (base + add-ons ± adjustment)
+    const pkgMap = new Map<string, { name: string; count: number; revenue: number; base: number; addons: number; hours: number }>();
     let addons = 0, adjustments = 0, billed = 0, collected = 0, upcoming = 0;
     const now = Date.now();
     for (const b of bookings) {
       const t = byTypeMap.get(b.typeNameSnap) ?? { name: b.typeNameSnap, count: 0, amount: 0 };
       t.count++; t.amount += b.base;
       byTypeMap.set(b.typeNameSnap, t);
+      const p = pkgMap.get(b.typeNameSnap) ?? { name: b.typeNameSnap, count: 0, revenue: 0, base: 0, addons: 0, hours: 0 };
+      p.count++; p.revenue += basis === 'BILLED' ? b.total : b.paidAmount; p.base += b.base; p.addons += b.addons; p.hours += b.hours;
+      pkgMap.set(b.typeNameSnap, p);
       addons += b.addons; adjustments += b.adjustment; billed += b.total; collected += b.paidAmount;
       if (new Date(b.startAt).getTime() > now) upcoming += b.total;
     }
@@ -61,6 +66,12 @@ export class RecapService {
         WHERE e.deleted_at IS NULL AND e.status = 'CONFIRMED' AND to_char(e.paid_on, 'YYYY-MM') = $1
         GROUP BY c.id ORDER BY amount DESC`, [month], q);
     const expensesTotal = byCategory.reduce((a, c) => a + c.amount, 0);
+
+    const topAddons = await this.db.many(
+      `SELECT a.name_snap AS name, count(DISTINCT a.booking_id)::int AS bookings, sum(a.line_total)::bigint AS revenue
+         FROM booking_addons a JOIN bookings b ON b.id = a.booking_id
+        WHERE b.status IN ('CONFIRMED','COMPLETED') AND wib_month(b.start_at) = $1
+        GROUP BY a.name_snap ORDER BY revenue DESC LIMIT 5`, [month], q);
 
     const drafts = await this.db.one(
       `SELECT count(*)::int AS count, coalesce(sum(amount), 0)::bigint AS amount FROM expenses
@@ -80,6 +91,10 @@ export class RecapService {
         total: revenueTotal, upcoming, bookingCount: bookings.length,
       },
       expenses: { byCategory, total: expensesTotal },
+      packages: [...pkgMap.values()]
+        .map((p) => ({ ...p, avg: p.count ? Math.round(p.revenue / p.count) : 0, share: revenueTotal > 0 ? Math.round((p.revenue / revenueTotal) * 1000) / 10 : 0 }))
+        .sort((x, y) => y.revenue - x.revenue),
+      topAddons,
       netProfit,
       marginPct: revenueTotal > 0 ? Math.round((netProfit / revenueTotal) * 1000) / 10 : null,
       drafts,
@@ -332,7 +347,13 @@ export class FinanceController {
     const { bookings, ...rest } = cur;
     return {
       ...rest,
-      previous: { month: prev.month, revenue: prev.revenue.total, expenses: prev.expenses.total, netProfit: prev.netProfit },
+      previous: { month: prev.month, revenue: prev.revenue.total, expenses: prev.expenses.total, netProfit: prev.netProfit, bookings: prev.revenue.bookingCount, marginPct: prev.marginPct },
+      // same package last month, for "▲/▼ vs last month" on the ranking
+      packages: cur.packages.map((p) => {
+        const before = prev.packages.find((x) => x.name === p.name);
+        return { ...p, prevRevenue: before?.revenue ?? 0, prevCount: before?.count ?? 0 };
+      }),
+      expenseChange: cur.expenses.byCategory.map((c) => ({ id: c.id, prevAmount: prev.expenses.byCategory.find((x) => x.id === c.id)?.amount ?? 0 })),
       revenueBookings: bookings.map((x) => ({ id: x.id, bookingNo: x.bookingNo, clientName: x.clientNameSnap, type: x.typeNameSnap, startAt: x.startAt, total: x.total, paid: x.paidAmount, status: x.status })),
     };
   }

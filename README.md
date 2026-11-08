@@ -20,14 +20,13 @@ docker compose up -d --build
 `docker compose up` runs a one-shot `migrate` service first (migrations, seed, `jes_app` role). Then the API and worker start with the least-privilege role.
 The `jes-api:local` image is built by the `migrate` service and reused by `api` and `worker`. After backend changes, run `docker compose up -d --build` (or `docker compose build migrate`), not `--build api`.
 
-## Owner dashboard
+## Owner dashboard (Keuangan)
 
-**Keuangan → Dashboard** (Owner only) shows:
+Three tabs share one month switcher (the month carries across tabs), and each figure appears in one place only:
 
-- the last finished month's net profit (hero figure), with income, expenses, margin and bookings vs the month before;
-- the running month on a separate strip, so half a month is never compared with a full one;
-- income vs expenses per month, and the net-profit trend against the average, for 6 or 12 months, by billed or collected basis;
-- window and year-to-date totals, best and worst month, income sources and the largest costs.
+- **Ringkasan** answers four questions for the selected month: how it went (net profit, income, expenses and bookings vs last month), how it compares with other months (net-profit chart with rank and average; tap a month to switch to it), **which package performed best** (revenue including add-ons, bookings, average per booking, change vs last month, best-selling add-ons) and **what the biggest expenses are** (share and change; tap one to see its expenses). A "needs action" card appears only for unconfirmed costs or unpaid balances.
+- **Pengeluaran** is the working view: confirm drafts, see the month's costs by day, filter by category, add new ones.
+- **Laporan** is the formal monthly statement: income and expense lines, net profit, receivables, the billed/collected basis, CSV/PDF export and month close.
 
 The data comes from `GET /api/v1/reports/trend?months=12&end=YYYY-MM&basis=BILLED|COLLECTED`. Every month equals that month's recap (checked by test DASH-01).
 
@@ -54,8 +53,8 @@ infra/      Dockerfiles and nginx config
 ```bash
 npm test                                           # pricing unit tests (PRD §6.3 worked examples)
 node backend/test/smoke.mjs http://localhost:8080  # 23 quick API checks against the running stack
-node backend/test/functional.mjs                   # 168 backend functional cases: every user story ±, dashboard, user management
-(cd frontend && npx playwright test)               # 48 frontend E2E cases in mobile Chromium (first run: npx playwright install chromium)
+node backend/test/functional.mjs                   # 170 backend functional cases: every user story ±, dashboard, user management
+(cd frontend && npx playwright test)               # 51 frontend E2E cases in mobile Chromium (first run: npx playwright install chromium)
 node backend/test/security.mjs                     # 63 penetration-test cases (docs/SECURITY_REVIEW.md)
 node backend/test/prod-check.mjs                   # 22 production architecture + transport checks (docs/ARCHITECTURE_REVIEW.md)
 ```
