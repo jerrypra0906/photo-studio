@@ -1,0 +1,143 @@
+# Photostudio on the shared Leviathan server (see docs/DEPLOY_SHARED_GBJESSDAPH.md).
+# Leviathan's Caddy (leviathan-caddy-1) terminates TLS for photostudio.gbjessdaph.org and proxies to
+# "photostudio-web" on the leviathan_default network. Nothing here publishes a public port.
+#   cd /srv/photostudio && docker compose up -d
+name: photostudio
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-hardening: &hardening
+  restart: unless-stopped
+  logging: *logging
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+
+x-app: &app
+  <<: *hardening
+  image: photostudio-api:${TAG:?set TAG in .env}
+  env_file: .env
+  read_only: true
+  tmpfs: ["/tmp:size=16m"]
+
+services:
+  # NOT named "web": compose registers the service name on every network the container joins, and
+  # Leviathan's Caddy proxies gbjessdaph.org to "web" on leviathan_default. A clash would send apex traffic here.
+  ps-web:
+    <<: *hardening
+    image: photostudio-web:${TAG}
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    # loopback only: health checks on the server; not reachable from outside
+    ports: ["127.0.0.1:8090:8080"]
+    networks:
+      default: {}
+      leviathan:
+        aliases: [photostudio-web]
+    depends_on: { api: { condition: service_healthy } }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 30s
+      retries: 3
+    deploy: { resources: { limits: { memory: 64m } } }
+
+  db:
+    <<: *hardening
+    image: postgres:18.6-alpine
+    cap_drop: []   # the entrypoint must switch to the postgres user
+    environment:
+      POSTGRES_DB: jes
+      POSTGRES_USER: jes
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      TZ: UTC
+    # small footprint: this VM is shared with Leviathan (4 GB, no swap)
+    command: >
+      postgres -c shared_buffers=96MB -c effective_cache_size=256MB -c work_mem=4MB
+      -c maintenance_work_mem=32MB -c max_connections=30 -c wal_compression=on
+      -c log_min_duration_statement=500ms -c log_lock_waits=on
+    volumes: [pgdata:/var/lib/postgresql]
+    shm_size: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jes -d jes"]
+      interval: 10s
+      retries: 20
+    deploy: { resources: { limits: { memory: 384m } } }
+
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://jes:${POSTGRES_PASSWORD}@db:5432/jes
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set in .env}
+    depends_on: { db: { condition: service_healthy } }
+
+  api:
+    <<: *app
+    environment:
+      DATABASE_URL: postgres://jes_app:${APP_DB_PASSWORD}@db:5432/jes
+      POSTGRES_PASSWORD: ""
+      SEED_OWNER_PASSWORD: ""
+      FILES_DIR: /data/files
+      TRUST_PROXY: "2"          # leviathan Caddy → nginx → api
+      COOKIE_SECURE: "true"
+      NODE_OPTIONS: --max-old-space-size=224
+    expose: ["3000"]
+    networks:
+      default:
+        aliases: [jes-api]
+    volumes: [files:/data/files]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/v1/ready || exit 1"]
+      interval: 15s
+      retries: 10
+    stop_grace_period: 20s
+    deploy: { resources: { limits: { memory: 320m } } }
+
+  worker:
+    <<: *app
+    command: ["node", "dist/worker.js"]
+    environment:
+      DATABASE_URL: postgres://jes_app:${APP_DB_PASSWORD}@db:5432/jes
+      POSTGRES_PASSWORD: ""
+      SEED_OWNER_PASSWORD: ""
+      NODE_OPTIONS: --max-old-space-size=128
+    depends_on: { api: { condition: service_healthy } }
+    healthcheck:
+      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(cat /tmp/worker-heartbeat) / 1000 )) -lt 120"]
+      interval: 30s
+      retries: 3
+    stop_grace_period: 20s
+    deploy: { resources: { limits: { memory: 192m } } }
+
+  backup:
+    <<: *hardening
+    image: postgres:18.6-alpine
+    cap_drop: []
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_AT: ${BACKUP_AT:-02:30}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ./restore.sh:/restore.sh:ro
+      - ./backups:/backups
+      - files:/data/files
+    depends_on: { db: { condition: service_healthy } }
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /backups/.last-success && test $$(( $$(date -u +%s) - $$(cat /backups/.last-success) )) -lt 93600"]
+      interval: 5m
+      start_period: 2m
+    deploy: { resources: { limits: { memory: 128m } } }
+
+networks:
+  leviathan:
+    external: true
+    name: leviathan_default
+
+volumes:
+  pgdata:
+  files:

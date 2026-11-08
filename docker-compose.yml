@@ -40,6 +40,9 @@ services:
       POSTGRES_PASSWORD: ""
       FILES_DIR: /data/files
     expose: ["3000"]
+    networks:
+      default:
+        aliases: [jes-api]
     volumes: [files:/data/files]
     depends_on: { migrate: { condition: service_completed_successfully } }
     healthcheck:

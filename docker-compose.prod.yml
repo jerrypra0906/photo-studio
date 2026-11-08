@@ -97,6 +97,9 @@ services:
       COOKIE_SECURE: "true"
       NODE_OPTIONS: --max-old-space-size=320
     expose: ["3000"]
+    networks:
+      default:
+        aliases: [jes-api]
     volumes: [files:/data/files]
     depends_on: { migrate: { condition: service_completed_successfully } }
     healthcheck:

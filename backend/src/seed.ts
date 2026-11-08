@@ -78,8 +78,9 @@ export async function seed() {
         [name, email, await argon2.hash(pw, { type: argon2.argon2id }), role]);
       if (!password) console.log(`seeded ${role} ${email} with generated password: ${pw}`);
     };
-    await user('Owner', config.seed.ownerEmail, config.seed.ownerPassword, 'OWNER');
-    await user('Staf', config.seed.staffEmail, config.seed.staffPassword, 'STAFF');
+    await user(process.env.SEED_OWNER_NAME || 'Owner', config.seed.ownerEmail, config.seed.ownerPassword, 'OWNER');
+    // production: leave SEED_STAFF_EMAIL empty to create only the Owner; staff are registered in Admin → Pengguna
+    if (process.env.SEED_STAFF_EMAIL !== '') await user('Staf', config.seed.staffEmail, config.seed.staffPassword, 'STAFF');
 
     await c.query('COMMIT');
     console.log('seeded initial data');
