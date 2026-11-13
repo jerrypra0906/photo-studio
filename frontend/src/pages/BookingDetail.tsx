@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { displayPhone, formatRp, longDateId, wibTime } from '@jes/shared';
+import { displayPhone, durationLabel, formatRp, longDateId, perMinutes, wibTime } from '@jes/shared';
 import { ApiError, api } from '../api';
 import { useIsOwner } from '../App';
 import { CANCEL_REASONS } from '../hooks';
@@ -15,12 +15,13 @@ const ACTION_LABEL: Record<string, string> = {
   INVOICE_SENT: 'Invoice ditandai terkirim', INVOICE_SENT_UNDO: 'Tanda terkirim dibatalkan', INVOICE_ISSUED: 'Invoice dibuat',
 };
 const FIELD_LABEL: Record<string, string> = {
-  typeNameSnap: 'Jenis', rateSnap: 'Tarif', hours: 'Durasi', startAt: 'Jadwal', clientNameSnap: 'Nama', clientPhoneSnap: 'Telepon',
+  typeNameSnap: 'Jenis', rateSnap: 'Tarif', hours: 'Durasi', durationMin: 'Durasi', startAt: 'Jadwal', clientNameSnap: 'Nama', clientPhoneSnap: 'Telepon',
   photographerNameSnap: 'Fotografer', adjustment: 'Penyesuaian', adjustmentReason: 'Alasan', dpAmount: 'DP', total: 'Total', addons: 'Add-on', notes: 'Catatan', paidAmount: 'Dibayar', status: 'Status',
 };
 const fmtHist = (field: string, v: string | null) => {
   if (v == null || v === '') return '—';
   if (field === 'startAt') return `${longDateId(v)} ${wibTime(v)}`;
+  if (field === 'durationMin') return durationLabel(Number(v));
   if (['rateSnap', 'adjustment', 'dpAmount', 'total', 'paidAmount'].includes(field)) return formatRp(Number(v));
   return v;
 };
@@ -88,9 +89,10 @@ export default function BookingDetail() {
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <span className="text-muted">Tanggal</span><span>{longDateId(b.startAt)}</span>
-            <span className="text-muted">Jam</span><span className="tabular">{wibTime(b.startAt)} – {wibTime(b.endAt)} WIB ({b.hours} jam)</span>
+            <span className="text-muted">Jam</span><span className="tabular">{wibTime(b.startAt)} – {wibTime(b.endAt)} WIB ({durationLabel(b.durationMin)})</span>
             <span className="text-muted">Jenis</span><span>{b.typeNameSnap}</span>
             {b.photographerNameSnap ? (<><span className="text-muted">Fotografer</span><span>{b.photographerNameSnap}</span></>) : null}
+            {b.needsPhotographer ? (<><span className="text-muted">Fotografer</span><span className="text-warn font-medium">Belum ditentukan</span></>) : null}
             {b.notes ? (<><span className="text-muted">Catatan</span><span className="whitespace-pre-wrap">{b.notes}</span></>) : null}
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -106,6 +108,22 @@ export default function BookingDetail() {
           ) : null}
         </Card>
 
+        {/* one-tap actions: the common edits without opening the ⋯ menu */}
+        {!cancelled ? (
+          <div className="grid grid-flow-col auto-cols-fr gap-2">
+            {canEdit ? <ActionTile icon="edit" label="Ubah" onClick={() => nav(`/bookings/${id}/edit`)} /> : null}
+            {canEdit && b.status === 'CONFIRMED' ? <ActionTile icon="wallet" label={b.paidAmount > 0 ? 'Ubah DP' : 'Catat DP'} onClick={() => nav(`/bookings/${id}/edit?focus=pay`)} /> : null}
+            {owner && b.status === 'CONFIRMED' && ended ? <ActionTile icon="check" label="Selesai" onClick={() => setSheet('complete')} /> : null}
+            {owner && b.status === 'COMPLETED' && b.balance > 0 ? <ActionTile icon="wallet" label="Catat bayar" onClick={() => setSheet('payment')} /> : null}
+            <ActionTile icon="copy" label="Duplikat" onClick={() => nav('/bookings/new', { state: { duplicate: b } })} />
+          </div>
+        ) : null}
+
+        {b.needsPhotographer ? (
+          <Banner tone="warn" action={<Link to={`/bookings/${b.id}/edit`} className="font-semibold underline min-h-11 flex items-center">Pilih</Link>}>
+            📷 Booking ini belum ada fotografer. Cari fotografer lalu pilih di sini.
+          </Banner>
+        ) : null}
         {cancelled ? (
           <Banner tone="bad">Dibatalkan — {CANCEL_REASONS.find(([k]) => k === b.cancelReason)?.[1] ?? b.cancelReason}{b.cancelNote ? ` · ${b.cancelNote}` : ''}. Tidak ada invoice.</Banner>
         ) : null}
@@ -119,9 +137,9 @@ export default function BookingDetail() {
         {/* Breakdown */}
         <Card className="space-y-2">
           <h3 className="font-semibold">Rincian</h3>
-          <Line label={`${b.typeNameSnap} · ${b.hours} jam × ${formatRp(b.rateSnap)}`} value={b.rateSnap * b.hours} />
+          <Line label={`${b.typeNameSnap} · ${durationLabel(b.durationMin)} × ${formatRp(b.rateSnap)}/jam`} value={perMinutes(b.rateSnap, b.durationMin)} />
           {b.addons.map((a: any) => (
-            <Line key={a.addonId} label={`${a.nameSnap}${a.unitSnap === 'HOUR' ? ` · ${b.hours} jam` : ''}${a.qty > 1 ? ` × ${a.qty}` : ''}`} value={a.lineTotal} />
+            <Line key={a.addonId} label={`${a.nameSnap}${a.unitSnap === 'HOUR' ? ` · ${durationLabel(b.durationMin)}` : ''}${a.qty > 1 ? ` × ${a.qty}` : ''}`} value={a.lineTotal} />
           ))}
           {b.adjustment ? <Line label={`${b.adjustment < 0 ? 'Diskon' : 'Biaya tambahan'} — ${b.adjustmentReason}`} value={b.adjustment} /> : null}
           <div className="border-t border-line pt-2 space-y-1">
@@ -188,6 +206,22 @@ export default function BookingDetail() {
         <PaymentSheet b={b} mode={sheet} onClose={() => setSheet(null)} onDone={(d) => { refresh(d); setSheet(null); toast(sheet === 'complete' ? 'Booking selesai' : 'Pembayaran dicatat'); }} />
       ) : null}
     </>
+  );
+}
+
+const ICONS: Record<string, ReactNode> = {
+  edit: <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />,
+  wallet: <><rect x="3" y="6" width="18" height="14" rx="3" /><path d="M3 10h18M16 15h2" /></>,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  copy: <><rect x="8" y="8" width="12" height="12" rx="2.5" /><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" /></>,
+};
+function ActionTile({ icon, label, onClick }: { icon: keyof typeof ICONS; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="min-h-[68px] rounded-2xl glass border border-line flex flex-col items-center justify-center gap-1 px-1 text-xs font-medium active:bg-accent-soft transition-colors">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-accent-text" aria-hidden>{ICONS[icon]}</svg>
+      <span className="whitespace-nowrap">{label}</span>
+    </button>
   );
 }
 

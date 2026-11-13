@@ -8,6 +8,8 @@ import { config } from './config';
 types.setTypeParser(20, (v) => Number(v));
 // date → plain "YYYY-MM-DD" string, never shifted by the server time zone
 types.setTypeParser(1082, (v) => v);
+// numeric → JS number (bookings.hours is a derived duration_min / 60)
+types.setTypeParser(1700, (v) => Number(v));
 
 export type Queryable = Pick<PoolClient, 'query'>;
 

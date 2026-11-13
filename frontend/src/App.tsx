@@ -3,6 +3,7 @@ import { BrowserRouter, NavLink, Navigate, Outlet, Route, Routes, useLocation, u
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Role } from '@jes/shared';
 import { ApiError, api, refreshSession, setAccessToken, setOnAuthLost } from './api';
+import { useNeedsPhotographer } from './BookingCard';
 import { Button, Empty, Page, PageHeader, Sheet, Spinner, ToastProvider, cx } from './ui';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -57,9 +58,10 @@ const Icon = {
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></>,
 };
 
-function Tab({ to, label, icon }: { to: string; label: string; icon: ReactNode }) {
+function Tab({ to, label, icon, badge }: { to: string; label: string; icon: ReactNode; badge?: number }) {
   return (
-    <NavLink to={to} end={to === '/'} className={({ isActive }) => cx('w-16 h-[52px] rounded-[26px] flex flex-col items-center justify-center gap-0.5 text-[11px] transition-colors', isActive ? 'bg-accent-soft text-accent-text font-semibold' : 'text-muted font-medium active:bg-accent-soft')}>
+    <NavLink to={to} end={to === '/'} aria-label={badge ? `${label} (${badge} perlu perhatian)` : undefined} className={({ isActive }) => cx('relative w-16 h-[52px] rounded-[26px] flex flex-col items-center justify-center gap-0.5 text-[11px] transition-colors', isActive ? 'bg-accent-soft text-accent-text font-semibold' : 'text-muted font-medium active:bg-accent-soft')}>
+      {badge ? <span className="absolute top-1 right-3 min-w-4 h-4 px-1 rounded-full bg-warn text-[10px] leading-4 font-bold text-white text-center" aria-hidden>{badge}</span> : null}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
       {label}
     </NavLink>
@@ -71,6 +73,7 @@ function Shell() {
   const { user } = useAuth();
   const nav = useNavigate();
   const owner = user?.role === 'OWNER';
+  const needPh = useNeedsPhotographer();
   const [choose, setChoose] = useState(false);
   const press = useRef<number | undefined>(undefined);
   const long = useRef(false);
@@ -79,7 +82,7 @@ function Shell() {
       <Outlet />
       <nav className="fixed inset-x-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40" aria-label="Navigasi utama">
         <div className="mx-auto max-w-[448px] h-[68px] px-1.5 flex items-center justify-around rounded-[34px] border border-line-strong bg-nav backdrop-blur-xl shadow-[inset_0_1px_0_var(--color-hi),0_16px_40px_var(--color-shadow)]">
-          <Tab to="/" label="Beranda" icon={Icon.home} />
+          <Tab to="/" label="Beranda" icon={Icon.home} badge={needPh.data?.length} />
           <Tab to="/schedule" label="Jadwal" icon={Icon.cal} />
           <div className="grid place-items-center">
             <button aria-label="Baru" className="size-14 grid place-items-center rounded-full bg-accent text-accent-ink shadow-[0_0_0_6px_var(--color-accent-soft),0_0_28px_var(--color-glow)] active:scale-95 transition-transform select-none"

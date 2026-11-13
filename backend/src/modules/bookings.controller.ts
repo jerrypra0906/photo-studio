@@ -17,11 +17,12 @@ export class BookingsController {
   list(
     @Query('q') q?: string, @Query('status') status?: string, @Query('from') from?: string, @Query('to') to?: string,
     @Query('typeId') typeId?: string, @Query('includeCancelled') includeCancelled?: string, @Query('toClose') toClose?: string,
+    @Query('needsPhotographer') needsPhotographer?: string,
   ) {
     if ((from && !ymd.test(from)) || (to && !ymd.test(to))) throw badRequest('Tanggal tidak valid');
     if (status && !['CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(status)) throw badRequest('Status tidak valid');
     if (typeId && !z.string().uuid().safeParse(typeId).success) throw badRequest('Jenis tidak valid');
-    return this.svc.list({ q, status, from, to, typeId, includeCancelled: includeCancelled === 'true', toClose: toClose === 'true' });
+    return this.svc.list({ q, status, from, to, typeId, includeCancelled: includeCancelled === 'true', toClose: toClose === 'true', needsPhotographer: needsPhotographer === 'true' });
   }
 
   @Get('schedule')

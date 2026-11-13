@@ -111,10 +111,31 @@ await step('US-05.4 ending after closing needs a reason', async () => {
   assert.equal(ok.status, 201);
 });
 
-await step('US-07.3 Photo Package without photographer is rejected', async () => {
-  const r = await api(owner, 'POST', '/bookings', { typeId: pkg.id, hours: 1, date: day, startTime: '10:00', clientName: 'Nopho', addons: [] });
-  assert.equal(r.status, 400);
-  assert.equal(r.data.fields.photographerId, 'Pilih fotografer');
+await step('Photo Package without photographer saves and is flagged until one is assigned', async () => {
+  const r = await api(owner, 'POST', '/bookings', { typeId: pkg.id, durationMin: 60, date: day, startTime: '10:00', clientName: 'Nopho', addons: [] });
+  assert.equal(r.status, 201);
+  assert.equal(r.data.needsPhotographer, true);
+  const list = await api(owner, 'GET', '/bookings?needsPhotographer=true');
+  assert.ok(list.data.some((b) => b.id === r.data.id));
+  const fixed = await api(owner, 'PATCH', `/bookings/${r.data.id}`, { typeId: pkg.id, durationMin: 60, date: day, startTime: '10:00', clientName: 'Nopho', photographerId: hamja.id, addons: [] }, { 'if-match': String(r.data.version) });
+  assert.equal(fixed.data.needsPhotographer, false);
+  await api(owner, 'POST', `/bookings/${r.data.id}/cancel`, { reason: 'OTHER' });
+});
+
+await step('durations in minutes are priced pro rata; Owner can set an add-on price', async () => {
+  const r = await api(owner, 'POST', '/bookings', { typeId: studio.id, durationMin: 90, date: day, startTime: '10:00', clientName: 'Menit', addons: [] });
+  assert.equal(r.status, 201);
+  assert.equal(r.data.total, Math.round(studio.hourlyRate * 1.5));
+  assert.equal(new Date(r.data.endAt) - new Date(r.data.startAt), 90 * 60_000);
+  await api(owner, 'POST', `/bookings/${r.data.id}/cancel`, { reason: 'OTHER' });
+  const bad = await api(owner, 'POST', '/bookings', { typeId: studio.id, durationMin: 50, date: day, startTime: '10:00', clientName: 'Menit', addons: [] });
+  assert.equal(bad.status, 400);
+  const p = await api(owner, 'POST', '/bookings', { typeId: pkg.id, durationMin: 30, date: day, startTime: '10:00', clientName: 'Harga', photographerId: hamja.id,
+    addons: [{ addonId: addon('MUA + Hairdo'), qty: 1, price: 450000 }] });
+  assert.equal(p.status, 201);
+  assert.equal(p.data.addons[0].priceSnap, 450000);
+  assert.equal(p.data.total, Math.round(pkg.hourlyRate / 2) + 450000);
+  await api(owner, 'POST', `/bookings/${p.data.id}/cancel`, { reason: 'OTHER' });
 });
 
 await step('US-08.4 Dekorasi is not available on Studio Only', async () => {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { auth, calendar, calendar_v3 } from '@googleapis/calendar';
 import jwt from 'jsonwebtoken';
-import { formatRp, wibDate, wibTime, displayPhone } from '@jes/shared';
+import { durationLabel, formatRp, wibDate, wibTime, displayPhone } from '@jes/shared';
 import { AppError } from '../common/http';
 import { decrypt, encrypt } from '../common/crypto';
 import { config, googleConfigured } from '../config';
@@ -206,7 +206,7 @@ export class GoogleService {
     if (b.status === 'COMPLETED' && s.gcalMarkCompleted) title = `✓ ${title} — ${PAY_LABEL(b.total, b.paidAmount)}`;
     const description = [
       `No. booking: ${b.bookingNo}`,
-      `${b.typeNameSnap} · ${b.hours} jam`,
+      `${b.typeNameSnap} · ${durationLabel(b.durationMin)}`,
       b.photographerNameSnap ? `Fotografer: ${b.photographerNameSnap}` : null,
       addons.length ? `Add-on: ${addons.map((a) => `${a.nameSnap}${a.qty > 1 ? ` ×${a.qty}` : ''}`).join(', ')}` : null,
       `Total: ${formatRp(b.total)}`,

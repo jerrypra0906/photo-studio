@@ -105,7 +105,7 @@ export function AdminSettings() {
 const KINDS: [string, string][] = [['NEW', 'Booking baru'], ['BALANCE', 'Pelunasan'], ['RESCHEDULE', 'Jadwal ulang'], ['CANCEL', 'Pembatalan']];
 const SAMPLE: Record<string, string> = {
   client_name: 'Aurel', booking_no: 'JES-261030-001', invoice_no: 'INV-JES-261030-001', type: 'Photo Package', day_date: 'Jumat, 30 Oktober 2026',
-  start: '14:00', end: '15:00', hours: '1', photographer: 'Hamja', line_items: '• Photo Package (1 jam): Rp599.000\n• MUA + Hairdo (1 booking): Rp600.000',
+  start: '14:00', end: '15:00', hours: '1', duration: '1 jam', photographer: 'Hamja', line_items: '• Photo Package (1 jam): Rp599.000\n• MUA + Hairdo (1 booking): Rp600.000',
   total: 'Rp1.199.000', dp: 'Rp300.000', balance: 'Rp899.000', bank_name: 'BCA', account_no: '1234567890', account_holder: 'JES Space Studio',
   studio_name: 'JES Space Studio', studio_phone: '0812-0000-0000', studio_address: 'Jl. Contoh No. 1', maps_url: 'https://maps.app.goo.gl/…',
   dp_rule: 'Bisa DP 300K, pelunasan sebelum photoshoot dimulai.', old_schedule: 'Jumat, 14 Agustus 2026, 12:00 WIB', cancel_reason: 'Dibatalkan oleh klien',

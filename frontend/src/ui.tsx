@@ -84,15 +84,52 @@ export function MoneyInput({ value, onChange, invalid, allowNegative, id, placeh
   );
 }
 
-export function Stepper({ value, min, max, onChange, suffix, maxHint }: { value: number; min: number; max: number; onChange: (v: number) => void; suffix?: string; maxHint?: string }) {
+export function Stepper({ value, min, max, onChange, suffix, maxHint, step = 1, format, wide }: {
+  value: number; min: number; max: number; onChange: (v: number) => void; suffix?: string; maxHint?: string;
+  step?: number; format?: (v: number) => string; wide?: boolean;
+}) {
   return (
     <div>
-      <div className="inline-flex items-center gap-1 rounded-2xl border border-line glass p-1">
-        <button type="button" aria-label="Kurangi" className="size-11 rounded-xl bg-surface border border-line text-xl disabled:opacity-30" disabled={value <= min} onClick={() => onChange(value - 1)}>−</button>
-        <span className="min-w-16 text-center font-display text-base font-semibold tabular whitespace-nowrap">{value}{suffix ? ` ${suffix}` : ''}</span>
-        <button type="button" aria-label="Tambah" className="size-11 rounded-xl bg-surface border border-line text-xl disabled:opacity-30" disabled={value >= max} onClick={() => onChange(value + 1)}>+</button>
+      <div className={cx('items-center gap-1 rounded-2xl border border-line glass p-1', wide ? 'flex w-full' : 'inline-flex')}>
+        <button type="button" aria-label="Kurangi" className="size-11 shrink-0 rounded-xl bg-surface border border-line text-xl disabled:opacity-30" disabled={value <= min} onClick={() => onChange(Math.max(min, value - step))}>−</button>
+        <span className={cx('text-center font-display text-base font-semibold tabular whitespace-nowrap', wide ? 'flex-1' : 'min-w-16')} aria-live="polite">{format ? format(value) : `${value}${suffix ? ` ${suffix}` : ''}`}</span>
+        <button type="button" aria-label="Tambah" className="size-11 shrink-0 rounded-xl bg-surface border border-line text-xl disabled:opacity-30" disabled={value >= max} onClick={() => onChange(Math.min(max, value + step))}>+</button>
       </div>
       {value >= max && maxHint ? <p className="text-xs text-muted mt-1">{maxHint}</p> : null}
+    </div>
+  );
+}
+
+const DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const MON_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+/** "2026-11-16" → "Sen, 16 Nov" (the date string is already a WIB calendar day) */
+export const chipDate = (ymd: string) => {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return `${DAY_SHORT[d.getUTCDay()]}, ${d.getUTCDate()} ${MON_SHORT[d.getUTCMonth()]}`;
+};
+export const shiftDay = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T12:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+
+/**
+ * One-tap date: named shortcuts (Hari ini, Besok, …) plus a chip that opens the phone's date picker.
+ * `shortcuts` are day offsets from today with their labels.
+ */
+export function DateChips({ value, onChange, today, shortcuts, min, max, label }: {
+  value: string; onChange: (v: string) => void; today: string; shortcuts: [number, string][]; min?: string; max?: string; label: string;
+}) {
+  const quick = shortcuts.map(([n, l]) => [shiftDay(today, n), l] as const);
+  const other = !quick.some(([d]) => d === value);
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
+      {quick.map(([d, l]) => <Chip key={d} active={value === d} onClick={() => onChange(d)}>{l}</Chip>)}
+      <label className={cx('relative min-h-11 rounded-full border px-4 text-sm font-medium whitespace-nowrap inline-flex items-center gap-1.5 cursor-pointer transition-colors',
+        other ? 'border-transparent bg-accent text-accent-ink shadow-[0_0_18px_var(--color-glow)]' : 'border-line glass')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+        {other && value ? chipDate(value) : 'Pilih tanggal'}
+        <input type="date" aria-label={`${label}: pilih tanggal`} value={value} min={min} max={max}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+          onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch { /* not allowed: native tap still opens it */ } }}
+          onChange={(e) => e.target.value && onChange(e.target.value)} />
+      </label>
     </div>
   );
 }

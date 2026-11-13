@@ -18,6 +18,7 @@ export default function Bookings() {
   const typeId = sp.get('typeId') ?? '';
   const month = sp.get('month') ?? '';
   const toClose = sp.get('toClose') === 'true';
+  const needsPhotographer = sp.get('needsPhotographer') === 'true';
   const types = useTypes();
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function Bookings() {
   if (status) params.set('status', status);
   if (typeId) params.set('typeId', typeId);
   if (toClose) params.set('toClose', 'true');
+  if (needsPhotographer) params.set('needsPhotographer', 'true');
   if (month) {
     params.set('from', `${month}-01`);
     params.set('to', wibDate(new Date(fromWib(`${shiftMonth(month, 1)}-01`).getTime() - 86400_000)));
@@ -40,8 +42,9 @@ export default function Bookings() {
 
   return (
     <>
-      <PageHeader title={toClose ? 'Perlu ditutup' : 'Booking'} back={toClose ? '/' : undefined} />
+      <PageHeader title={toClose ? 'Perlu ditutup' : needsPhotographer ? 'Belum ada fotografer' : 'Booking'} back={toClose || needsPhotographer ? '/' : undefined} />
       <Page>
+        {needsPhotographer ? <p className="text-sm text-muted">Sesi mendatang yang belum ada fotografernya. Buka booking lalu pilih fotografer.</p> : null}
         <Input type="search" placeholder="Cari nama, nomor HP, atau no. booking" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari booking" />
         <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
           {STATUSES.map(([v, l]) => <Chip key={v} active={status === v} onClick={() => set('status', v)}>{l}</Chip>)}

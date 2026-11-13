@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const PdfPrinter: new (fonts: unknown) => { createPdfKitDocument(d: unknown): any } = require('pdfmake');
 import type { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
 import {
-  TemplateKind, TemplateVars, displayPhone, formatRp, longDateId, monthLabelId, renderTemplate, wibTime,
+  TemplateKind, TemplateVars, displayPhone, durationLabel, formatRp, longDateId, monthLabelId, perMinutes, renderTemplate, wibTime,
 } from '@jes/shared';
 import { AppError } from '../common/http';
 import { Db } from '../db';
@@ -59,8 +59,8 @@ export class DocumentsService {
   }
 
   private lineItems(b: any): { label: string; qty: string; unit: number; amount: number }[] {
-    const rows = [{ label: `${b.typeNameSnap}`, qty: `${b.hours} jam`, unit: b.rateSnap, amount: b.rateSnap * b.hours }];
-    for (const a of b.addons) rows.push({ label: a.nameSnap, qty: `${a.unitSnap === 'HOUR' ? b.hours * a.qty : a.qty} ${unitLabel(a.unitSnap)}`, unit: a.priceSnap, amount: a.lineTotal });
+    const rows = [{ label: `${b.typeNameSnap}`, qty: durationLabel(b.durationMin), unit: b.rateSnap, amount: perMinutes(b.rateSnap, b.durationMin) }];
+    for (const a of b.addons) rows.push({ label: a.nameSnap, qty: a.unitSnap === 'HOUR' ? `${durationLabel(b.durationMin)}${a.qty > 1 ? ` × ${a.qty}` : ''}` : `${a.qty} ${unitLabel(a.unitSnap)}`, unit: a.priceSnap, amount: a.lineTotal });
     if (b.adjustment) rows.push({ label: `${b.adjustment < 0 ? 'Diskon' : 'Biaya tambahan'}${b.adjustmentReason ? ` (${b.adjustmentReason})` : ''}`, qty: '', unit: b.adjustment, amount: b.adjustment });
     return rows;
   }
@@ -74,7 +74,9 @@ export class DocumentsService {
       day_date: longDateId(b.startAt),
       start: wibTime(b.startAt),
       end: wibTime(b.endAt),
-      hours: String(b.hours),
+      // older templates say "({hours} jam)"; new ones use {duration}
+      hours: String(Math.round(b.hours * 100) / 100).replace('.', ','),
+      duration: durationLabel(b.durationMin),
       photographer: b.photographerNameSnap ?? '',
       line_items: this.lineItems(b).map((l) => `• ${l.label}${l.qty ? ` (${l.qty})` : ''}: ${formatRp(l.amount)}`).join('\n'),
       total: formatRp(b.total),
@@ -132,7 +134,7 @@ export class DocumentsService {
       {
         columns: [
           [{ text: 'Ditagihkan kepada', style: 'label' }, { text: b.clientNameSnap, bold: true }, b.clientPhoneSnap ? { text: displayPhone(b.clientPhoneSnap), fontSize: 8 } : ''],
-          [{ text: 'Sesi', style: 'label' }, { text: `${b.typeNameSnap} · ${b.hours} jam`, bold: true },
+          [{ text: 'Sesi', style: 'label' }, { text: `${b.typeNameSnap} · ${durationLabel(b.durationMin)}`, bold: true },
            { text: longDateId(b.startAt), fontSize: 8 }, { text: `${wibTime(b.startAt)} – ${wibTime(b.endAt)} WIB`, fontSize: 8 },
            b.photographerNameSnap ? { text: `Fotografer: ${b.photographerNameSnap}`, fontSize: 8 } : ''],
         ],

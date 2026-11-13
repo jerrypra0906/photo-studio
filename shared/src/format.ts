@@ -124,6 +124,12 @@ export function shiftMonth(month: string, delta: number): string {
   return `${t.getUTCFullYear()}-${p2(t.getUTCMonth() + 1)}`;
 }
 
+/** 90 → "1 jam 30 menit", 45 → "45 menit", 120 → "2 jam" */
+export function durationLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60), m = Math.round(minutes % 60);
+  return [h ? `${h} jam` : '', m ? `${m} menit` : ''].filter(Boolean).join(' ') || '0 menit';
+}
+
 /** "HH:mm" → minutes since midnight */
 export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);

@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  displayPhone, formatRp, fromMinutes, fromWib, normalizePhone, priceBooking, toMinutes, wibDate, wibParts, wibTime,
+  displayPhone, durationLabel, formatRp, fromMinutes, fromWib, longDateId, normalizePhone, priceBooking, toMinutes, wibDate, wibParts, wibTime,
 } from '@jes/shared';
 import { ApiError, api, uuid } from '../api';
 import { useIsOwner } from '../App';
 import { UNIT_LABEL, useAddons, usePhotographers, useSettings, useTypes } from '../hooks';
-import { Banner, BottomBar, Button, Card, Chip, Empty, Field, Input, MoneyInput, Page, PageHeader, Spinner, Stepper, Toggle, cx, inputCls, useToast } from '../ui';
+import { Banner, BottomBar, Button, Card, Chip, Empty, Field, Input, MoneyInput, Page, PageHeader, Spinner, Stepper, Toggle, cx, DateChips, inputCls, useToast } from '../ui';
 
 /** Google event descriptions may carry simple HTML. */
 const plainText = (html: string) => html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li)>/gi, '\n').replace(/<[^>]+>/g, '')
@@ -17,8 +17,8 @@ const plainText = (html: string) => html.replace(/<br\s*\/?>/gi, '\n').replace(/
 const findPhone = (t: string) => t.match(/(?:\+?62|0)8[\d\s.-]{7,14}\d/)?.[0].replace(/[\s.-]/g, '') ?? '';
 
 interface FormState {
-  typeId: string; hours: number; date: string; startTime: string; clientName: string; clientPhone: string; photographerId: string | null;
-  addons: Record<string, number>; adjustment: number; adjustmentReason: string; dpAmount: number; notes: string; afterHoursReason: string;
+  typeId: string; durationMin: number; date: string; startTime: string; clientName: string; clientPhone: string; photographerId: string | null;
+  addons: Record<string, number>; addonPrices: Record<string, number | null>; adjustment: number; adjustmentReason: string; dpAmount: number; notes: string; afterHoursReason: string;
 }
 
 /** S5 New / Edit booking (L2-1.1, L2-1.3, PRD §8.4). */
@@ -50,6 +50,8 @@ export default function BookingForm() {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [applyCurrent, setApplyCurrent] = useState(false);
+  // set on the first tap of Save, so required-field hints appear only once they help
+  const [attempted, setAttempted] = useState(false);
   const idemKey = useRef(uuid());
 
   // initialise once data is loaded
@@ -58,10 +60,10 @@ export default function BookingForm() {
     const src = editing ? existing.data : duplicateOf;
     if (src) {
       setF({
-        typeId: src.typeId, hours: src.hours, date: editing ? wibDate(src.startAt) : (sp.get('date') ?? today),
+        typeId: src.typeId, durationMin: src.durationMin ?? src.hours * 60, date: editing ? wibDate(src.startAt) : (sp.get('date') ?? today),
         startTime: editing ? wibTime(src.startAt) : (sp.get('time') ?? ''), clientName: src.clientNameSnap,
         clientPhone: src.clientPhoneSnap ? displayPhone(src.clientPhoneSnap) : '', photographerId: src.photographerId,
-        addons: Object.fromEntries((src.addons ?? []).map((a: any) => [a.addonId, a.qty])),
+        addons: Object.fromEntries((src.addons ?? []).map((a: any) => [a.addonId, a.qty])), addonPrices: {},
         adjustment: src.adjustment ?? 0, adjustmentReason: src.adjustmentReason ?? '', dpAmount: editing ? src.dpAmount : 0,
         notes: src.notes ?? '', afterHoursReason: src.afterHoursReason ?? '',
       });
@@ -71,19 +73,20 @@ export default function BookingForm() {
     const active = types.data.filter((t) => t.active);
     if (fromCal) {
       const start = new Date(fromCal.startAt);
-      const hours = Math.min(24, Math.max(1, Math.ceil((new Date(fromCal.endAt).getTime() - start.getTime()) / 3600_000)));
+      // round up to whole 15 minutes
+      const durationMin = Math.min(1440, Math.max(15, Math.ceil((new Date(fromCal.endAt).getTime() - start.getTime()) / 900_000) * 15));
       const desc = plainText(fromCal.description ?? '');
       setF({
-        typeId: active.length === 1 ? active[0].id : '', hours, date: wibDate(start), startTime: wibTime(start),
-        clientName: (fromCal.summary ?? '').trim().slice(0, 60), clientPhone: findPhone(desc), photographerId: null, addons: {},
+        typeId: active.length === 1 ? active[0].id : '', durationMin, date: wibDate(start), startTime: wibTime(start),
+        clientName: (fromCal.summary ?? '').trim().slice(0, 60), clientPhone: findPhone(desc), photographerId: null, addons: {}, addonPrices: {},
         adjustment: 0, adjustmentReason: '', dpAmount: 0, notes: desc.slice(0, 1000), afterHoursReason: '',
       });
       if (desc) setShowPayment(true);
       return;
     }
     setF({
-      typeId: active.length === 1 ? active[0].id : '', hours: 1, date: sp.get('date') ?? today, startTime: sp.get('time') ?? '',
-      clientName: '', clientPhone: '', photographerId: null, addons: {}, adjustment: 0, adjustmentReason: '', dpAmount: 0, notes: '', afterHoursReason: '',
+      typeId: active.length === 1 ? active[0].id : '', durationMin: 60, date: sp.get('date') ?? today, startTime: sp.get('time') ?? '',
+      clientName: '', clientPhone: '', photographerId: null, addons: {}, addonPrices: {}, adjustment: 0, adjustmentReason: '', dpAmount: 0, notes: '', afterHoursReason: '',
     });
   }, [types.data, existing.data, editing, f, sp, today, duplicateOf, inboxId, inbox.isLoading, fromCal]);
 
@@ -91,6 +94,20 @@ export default function BookingForm() {
     queryKey: ['schedule', 'day', f?.date, id],
     queryFn: () => api.get(`/schedule?from=${f!.date}&to=${f!.date}${id ? `&excludeId=${id}` : ''}`),
     enabled: !!f?.date,
+  });
+
+  // "Catat DP" on the detail page lands straight on the DP field
+  const focusPay = sp.get('focus') === 'pay';
+  const focusedPay = useRef(false);
+  useEffect(() => { if (f && focusPay) setShowPayment(true); }, [f, focusPay]);
+  // every render until the DP field is on screen (data and settings may still be loading)
+  useEffect(() => {
+    if (!focusPay || focusedPay.current || addons.isLoading || photographers.isLoading || sched.isLoading) return;
+    const el = document.getElementById('dp') as HTMLInputElement | null;
+    if (!el) return;
+    focusedPay.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
   });
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => { setF((p) => (p ? { ...p, [k]: v } : p)); setErrors((e) => ({ ...e, [k]: '' })); };
@@ -110,10 +127,11 @@ export default function BookingForm() {
     const lines = Object.entries(f.addons).map(([aid, qty]) => {
       const m = addons.data?.find((a) => a.id === aid);
       const snap = keepSnap ? snapByAddon[aid] : undefined;
-      return { addonId: aid, name: snap?.nameSnap ?? m?.name ?? '', unit: (snap?.unitSnap ?? m?.unit ?? 'BOOKING') as any, price: snap?.priceSnap ?? m?.price ?? 0, qty };
+      const custom = owner ? f.addonPrices[aid] : null;
+      return { addonId: aid, name: snap?.nameSnap ?? m?.name ?? '', unit: (snap?.unitSnap ?? m?.unit ?? 'BOOKING') as any, price: custom ?? snap?.priceSnap ?? m?.price ?? 0, qty };
     });
     const rate = keepSnap && ex?.typeId === type.id ? ex.rateSnap : type.hourlyRate;
-    return priceBooking({ typeName: type.name, rate, hours: f.hours, addons: lines, adjustment: owner ? f.adjustment : (ex?.adjustment ?? 0), dp: f.dpAmount, paid: ex?.status === 'COMPLETED' ? ex.paidAmount : f.dpAmount });
+    return priceBooking({ typeName: type.name, rate, minutes: f.durationMin, addons: lines, adjustment: owner ? f.adjustment : (ex?.adjustment ?? 0), dp: f.dpAmount, paid: ex?.status === 'COMPLETED' ? ex.paidAmount : f.dpAmount });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f, type, addons.data, keepSnap, ex, owner]);
 
@@ -130,9 +148,9 @@ export default function BookingForm() {
   const buffer = s?.bufferMin ?? 0;
   const bookings: any[] = sched.data?.bookings ?? [];
   const nowMin = toMinutes(wibTime(new Date()));
-  const overlaps = (startMin: number, hours: number) => {
+  const overlaps = (startMin: number, minutes: number) => {
     const a = fromWib(f!.date, fromMinutes(startMin)).getTime();
-    const bEnd = a + hours * 3600_000 + buffer * 60_000;
+    const bEnd = a + minutes * 60_000 + buffer * 60_000;
     return bookings.find((b) => a < new Date(b.blockEndAt).getTime() && new Date(b.startAt).getTime() < bEnd);
   };
   const slotOptions: { t: string; free: boolean }[] = [];
@@ -140,19 +158,19 @@ export default function BookingForm() {
     // start times inside opening hours; a session running past closing is flagged below (US-05.4)
     for (let m = toMinutes(dayHours.open); m < toMinutes(dayHours.close); m += step) {
       const isPast = f.date === today && m < nowMin;
-      slotOptions.push({ t: fromMinutes(m), free: !overlaps(m, f.hours) && !isPast });
+      slotOptions.push({ t: fromMinutes(m), free: !overlaps(m, f.durationMin) && !isPast });
     }
   }
   const startMin = f?.startTime ? toMinutes(f.startTime) : null;
-  const endMin = startMin != null && f ? startMin + f.hours * 60 : null;
-  const clash = startMin != null && f ? overlaps(startMin, f.hours) : null;
+  const endMin = startMin != null && f ? startMin + f.durationMin : null;
+  const clash = startMin != null && f ? overlaps(startMin, f.durationMin) : null;
   const afterHoursMsg = startMin != null && endMin != null && dayHours
     ? dayHours.closed ? 'Studio tutup di hari ini' : endMin > toMinutes(dayHours.close) ? `Selesai setelah jam tutup (${fromMinutes(endMin)})` : startMin < toMinutes(dayHours.open) ? `Mulai sebelum jam buka (${dayHours.open})` : ''
     : '';
   const photographerBusy = (pid: string) => startMin != null && bookings.some((b) => {
     if (b.photographerId !== pid) return false;
     const a = fromWib(f!.date, f!.startTime).getTime();
-    return a < new Date(b.endAt).getTime() && new Date(b.startAt).getTime() < a + f!.hours * 3600_000;
+    return a < new Date(b.endAt).getTime() && new Date(b.startAt).getTime() < a + f!.durationMin * 60_000;
   });
 
   // ---------- client suggestions (US-06.2) ----------
@@ -173,18 +191,44 @@ export default function BookingForm() {
   const activePhotographers = (photographers.data ?? []).filter((p) => p.active || p.id === ex?.photographerId);
   const phoneInvalid = f.clientPhone.trim() !== '' && !normalizePhone(f.clientPhone);
 
-  const canSave = !!type && !!f.startTime && f.clientName.trim().length >= 2 && (!type.requiresPhotographer || !!f.photographerId)
+  // photographer is optional: a booking without one is flagged until someone is assigned
+  const canSave = !!type && !!f.startTime && f.clientName.trim().length >= 2 && f.durationMin >= 15 && f.durationMin <= maxHours * 60
     && !clash && !phoneInvalid && !(afterHoursMsg && !f.afterHoursReason.trim()) && !!pricing && pricing.errors.length === 0
     && !(owner && f.adjustment !== 0 && !f.adjustmentReason.trim());
+
+  // what still blocks Save, in form order: [label, element to scroll to, needs the payment section open]
+  const missing: [string, string, boolean?][] = [];
+  if (!type) missing.push(['jenis', 'sec-type']);
+  if (!f.startTime) missing.push(['jam mulai', 'sec-time']);
+  else if (clash) missing.push(['jam bentrok', 'sec-time']);
+  if (afterHoursMsg && !clash && !f.afterHoursReason.trim()) missing.push(['alasan di luar jam', 'ahr']);
+  if (f.clientName.trim().length < 2) missing.push(['nama klien', 'cn']);
+  if (phoneInvalid) missing.push(['nomor WhatsApp', 'cp']);
+  if (owner && f.adjustment !== 0 && !f.adjustmentReason.trim()) missing.push(['alasan penyesuaian', 'adjr', true]);
+  if (pricing?.errors.length) missing.push(['pembayaran', 'dp', true]);
+
+  const goToMissing = () => {
+    setAttempted(true);
+    const first = missing[0];
+    if (!first) return;
+    if (first[2]) setShowPayment(true);
+    // wait a frame so a just-opened section exists
+    requestAnimationFrame(() => {
+      const el = document.getElementById(first[1]);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el instanceof HTMLInputElement) el.focus({ preventScroll: true });
+    });
+  };
 
   const save = async () => {
     if (!type || !pricing) return;
     setBusy(true);
     setFormError('');
     const body = {
-      typeId: f.typeId, hours: f.hours, date: f.date, startTime: f.startTime, clientName: f.clientName.trim(),
+      typeId: f.typeId, durationMin: f.durationMin, date: f.date, startTime: f.startTime, clientName: f.clientName.trim(),
       clientPhone: f.clientPhone.trim() || null, photographerId: type.requiresPhotographer || f.photographerId ? f.photographerId : null,
-      addons: Object.entries(f.addons).filter(([aid]) => availableAddons.some((a) => a.id === aid)).map(([addonId, qty]) => ({ addonId, qty })),
+      addons: Object.entries(f.addons).filter(([aid]) => availableAddons.some((a) => a.id === aid))
+        .map(([addonId, qty]) => ({ addonId, qty, price: owner && f.addonPrices[addonId] != null ? f.addonPrices[addonId] : undefined })),
       adjustment: owner ? f.adjustment : 0, adjustmentReason: owner && f.adjustment ? f.adjustmentReason : null,
       dpAmount: f.dpAmount, notes: f.notes || null, afterHoursReason: afterHoursMsg ? f.afterHoursReason : null,
       applyCurrentPrices: editing ? applyCurrent : undefined,
@@ -234,13 +278,14 @@ export default function BookingForm() {
         ) : inboxId && !inbox.isLoading ? <Banner tone="warn">Event kalender ini sudah diproses atau dihapus. Booking ini akan dibuat sebagai booking baru biasa.</Banner> : null}
 
         {/* 1. Type */}
-        <section className="space-y-2">
+        <section id="sec-type" className="space-y-2 scroll-mt-20">
           <h2 className="font-semibold">Jenis</h2>
+          {attempted && !type ? <p className="text-sm text-bad" role="alert">Pilih jenis booking</p> : null}
           <div className="grid grid-cols-2 gap-3">
             {activeTypes.map((t) => (
               <button key={t.id} type="button" aria-pressed={f.typeId === t.id}
                 onClick={() => setF((p) => p && ({
-                  ...p, typeId: t.id, hours: Math.min(Math.max(p.hours, t.minHours), Math.min(t.maxHours, s?.maxHours ?? 8)),
+                  ...p, typeId: t.id, durationMin: Math.min(p.durationMin, Math.min(t.maxHours, s?.maxHours ?? 8) * 60),
                   // US-03.2: photographer hidden & cleared when the type doesn't need one
                   photographerId: t.requiresPhotographer ? p.photographerId : null,
                   addons: Object.fromEntries(Object.entries(p.addons).filter(([aid]) => addons.data?.find((a) => a.id === aid)?.typeIds.includes(t.id))),
@@ -254,28 +299,36 @@ export default function BookingForm() {
         </section>
 
         {/* 2. When */}
-        <section className="space-y-3">
+        <section id="sec-time" className="space-y-4 scroll-mt-20">
           <h2 className="font-semibold">Waktu</h2>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
-            <Field label="Tanggal" htmlFor="date" error={errors.date}>
-              <input id="date" type="date" className={inputCls} value={f.date} min={owner ? undefined : today}
-                onChange={(e) => { set('date', e.target.value); set('startTime', ''); }} />
-            </Field>
-            <Field label="Durasi" error={errors.hours}>
-              <Stepper value={f.hours} min={type?.minHours ?? 1} max={maxHours} suffix="jam" onChange={(v) => set('hours', v)} maxHint={`Maks ${maxHours} jam`} />
-            </Field>
-          </div>
+          <Field label="Tanggal" error={errors.date}>
+            <DateChips label="Tanggal" value={f.date} today={today} min={owner ? undefined : today}
+              shortcuts={[[0, 'Hari ini'], [1, 'Besok']]}
+              onChange={(d) => { set('date', d); set('startTime', ''); }} />
+            <p className="text-sm text-muted pt-1">{longDateId(fromWib(f.date, '12:00'))}</p>
+          </Field>
           {f.date < today ? <Banner tone="warn">Tanggal lampau — booking akan ditandai “back-dated”.</Banner> : null}
-          <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
-            {[1, 2, 3].filter((h) => h <= maxHours).map((h) => <Chip key={h} active={f.hours === h} onClick={() => set('hours', h)}>{h} jam</Chip>)}
-          </div>
-          <Field label="Jam mulai" error={errors.startTime}>
+          <Field label="Durasi" error={errors.durationMin || errors.hours}>
+            <Stepper wide value={f.durationMin} step={15} min={15} max={maxHours * 60} format={durationLabel} maxHint={`Maks ${maxHours} jam`}
+              onChange={(v) => set('durationMin', v)} />
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {[60, 90, 120, 180].filter((m) => m <= maxHours * 60).map((m) => (
+                <Chip key={m} className="px-0" active={f.durationMin === m} onClick={() => set('durationMin', m)}>{m % 60 ? `${Math.floor(m / 60)},5 jam` : `${m / 60} jam`}</Chip>
+              ))}
+            </div>
+          </Field>
+          <Field label="Jam mulai" error={errors.startTime || (attempted && !f.startTime ? 'Pilih jam mulai' : '')}>
             {dayHours?.closed ? <p className="text-sm text-warn">Studio tutup di hari ini.</p> : null}
             {sched.isLoading ? <Spinner /> : (
-              <div className="flex flex-wrap gap-2">
-                {slotOptions.filter((o) => o.free || o.t === f.startTime).map((o) => <Chip key={o.t} active={f.startTime === o.t} onClick={() => set('startTime', o.t)}>{o.t}</Chip>)}
-                {slotOptions.every((o) => !o.free) && !dayHours?.closed ? <p className="text-sm text-muted">Tidak ada slot kosong untuk {f.hours} jam di hari ini.</p> : null}
-              </div>
+              <>
+                <div className="grid grid-cols-4 gap-2">
+                  {/* taken slots stay visible (struck through) so the day's shape is clear */}
+                  {slotOptions.filter((o) => !(f.date === today && toMinutes(o.t) < nowMin) || o.t === f.startTime).map((o) => (
+                    <Chip key={o.t} className="px-0" active={f.startTime === o.t} disabled={!o.free && o.t !== f.startTime} onClick={() => set('startTime', o.t)}>{o.t}</Chip>
+                  ))}
+                </div>
+                {slotOptions.every((o) => !o.free) && !dayHours?.closed ? <p className="text-sm text-muted">Tidak ada slot kosong untuk {durationLabel(f.durationMin)} di hari ini. Coba durasi lebih pendek atau tanggal lain.</p> : null}
+              </>
             )}
             {owner ? (
               <details className="mt-2 text-sm">
@@ -301,9 +354,9 @@ export default function BookingForm() {
         {/* 3. Client */}
         <section className="space-y-3">
           <h2 className="font-semibold">Klien</h2>
-          <Field label="Nama klien" htmlFor="cn" error={errors.clientName}>
+          <Field label="Nama klien" htmlFor="cn" error={errors.clientName || (attempted && f.clientName.trim().length < 2 ? 'Isi nama klien (min. 2 huruf)' : '')}>
             <div className="relative">
-              <Input id="cn" autoComplete="off" value={f.clientName} invalid={!!errors.clientName} maxLength={60}
+              <Input id="cn" autoComplete="off" autoCapitalize="words" enterKeyHint="next" value={f.clientName} invalid={!!errors.clientName || (attempted && f.clientName.trim().length < 2)} maxLength={60}
                 onFocus={() => setSuggestOpen(true)} onBlur={() => setTimeout(() => setSuggestOpen(false), 150)}
                 onChange={(e) => set('clientName', e.target.value)} />
               {suggestOpen && suggestions.data?.length ? (
@@ -322,18 +375,20 @@ export default function BookingForm() {
             </div>
           </Field>
           <Field label="Nomor WhatsApp" htmlFor="cp" error={errors.clientPhone || (phoneInvalid ? 'Masukkan nomor telepon yang valid' : '')} hint="Opsional, dibutuhkan untuk tombol Buka WhatsApp">
-            <Input id="cp" type="tel" inputMode="tel" autoComplete="off" placeholder="0812-3456-7890" value={f.clientPhone} invalid={phoneInvalid} onChange={(e) => set('clientPhone', e.target.value)} />
+            <Input id="cp" type="tel" inputMode="tel" autoComplete="off" placeholder="0812-3456-7890" value={f.clientPhone} invalid={phoneInvalid} onChange={(e) => set('clientPhone', e.target.value)}
+              onBlur={() => { const n = normalizePhone(f.clientPhone); if (n) set('clientPhone', displayPhone(n)); }} />
           </Field>
         </section>
 
         {/* 4. Photographer */}
         {type?.requiresPhotographer ? (
           <section className="space-y-2">
-            <h2 className="font-semibold">Fotografer</h2>
+            <h2 className="font-semibold">Fotografer <span className="text-sm font-normal text-muted">· opsional, bisa diisi nanti</span></h2>
             {activePhotographers.length === 0 ? (
               <Empty action={owner ? <Link to="/admin/photographers" className="text-accent-text underline">Tambah fotografer</Link> : null}>Belum ada fotografer.</Empty>
             ) : (
               <div className="flex flex-wrap gap-2">
+                <Chip active={!f.photographerId} onClick={() => set('photographerId', null)}>Belum ditentukan</Chip>
                 {activePhotographers.map((p) => {
                   const isBusy = photographerBusy(p.id);
                   return <Chip key={p.id} active={f.photographerId === p.id} disabled={isBusy} onClick={() => set('photographerId', p.id)}>{p.name}{isBusy ? ' · Sibuk' : ''}</Chip>;
@@ -341,6 +396,7 @@ export default function BookingForm() {
               </div>
             )}
             {errors.photographerId ? <p className="text-sm text-bad">{errors.photographerId}</p> : null}
+            {!f.photographerId && activePhotographers.length ? <p className="text-sm text-warn">Booking akan ditandai “Belum ada fotografer” sampai fotografer dipilih.</p> : null}
           </section>
         ) : null}
 
@@ -352,13 +408,19 @@ export default function BookingForm() {
             {availableAddons.map((a) => {
               const on = !!f.addons[a.id];
               const snap = keepSnap ? snapByAddon[a.id] : undefined;
-              const price = snap?.priceSnap ?? a.price;
+              const listPrice = snap?.priceSnap ?? a.price;
+              const custom = owner ? f.addonPrices[a.id] : null;
+              const price = custom ?? listPrice;
               const unit = snap?.unitSnap ?? a.unit;
               return (
-                <div key={a.id} className={cx('rounded-2xl border p-3 flex items-center gap-3', on ? 'border-accent-text bg-accent-soft shadow-[0_0_0_4px_var(--color-accent-soft)]' : 'border-line glass')}>
+                <div key={a.id} className={cx('rounded-2xl border p-3 space-y-2', on ? 'border-accent-text bg-accent-soft shadow-[0_0_0_4px_var(--color-accent-soft)]' : 'border-line glass')}>
+                <div className="flex items-center gap-3">
                   <button type="button" className="flex-1 text-left min-h-11" onClick={() => toggleAddon(a.id)} aria-pressed={on}>
                     <div className="font-medium">{a.name}</div>
-                    <div className="text-sm text-muted tabular">{formatRp(price)} {UNIT_LABEL[unit]}</div>
+                    <div className="text-sm text-muted tabular">
+                      {formatRp(price)} {UNIT_LABEL[unit]}
+                      {custom != null && custom !== listPrice ? <span className="ml-1 line-through opacity-70">{formatRp(listPrice)}</span> : null}
+                    </div>
                   </button>
                   {on && unit === 'PERSON' ? (
                     <Stepper value={f.addons[a.id]} min={1} max={50} onChange={(v) => setF((p) => p && ({ ...p, addons: { ...p.addons, [a.id]: v } }))} />
@@ -368,6 +430,18 @@ export default function BookingForm() {
                       <span className={cx('absolute top-0.5 size-6 rounded-full bg-white shadow transition-all', on ? 'left-[22px]' : 'left-0.5')} />
                     </button>
                   )}
+                </div>
+                {on && owner ? (
+                  <div className="flex items-center gap-2">
+                    <label htmlFor={`ap-${a.id}`} className="text-sm text-muted shrink-0">Harga {UNIT_LABEL[unit]}</label>
+                    <div className="flex-1"><MoneyInput id={`ap-${a.id}`} value={price}
+                      onChange={(v) => setF((p) => p && ({ ...p, addonPrices: { ...p.addonPrices, [a.id]: v } }))} /></div>
+                    {custom != null && custom !== listPrice ? (
+                      <button type="button" className="text-sm text-accent-text min-h-11 px-1 shrink-0"
+                        onClick={() => setF((p) => p && ({ ...p, addonPrices: { ...p.addonPrices, [a.id]: null } }))}>Reset</button>
+                    ) : null}
+                  </div>
+                ) : null}
                 </div>
               );
             })}
@@ -384,7 +458,15 @@ export default function BookingForm() {
         {/* 6. Payment */}
         <section className="space-y-3">
           <button type="button" className="w-full flex items-center justify-between min-h-11 font-semibold" onClick={() => setShowPayment(!showPayment)} aria-expanded={showPayment}>
-            Pembayaran & catatan <span className="text-muted">{showPayment ? '▲' : '▼'}</span>
+            <span className="text-left">
+              Pembayaran & catatan
+              {!showPayment && (f.dpAmount || f.adjustment || f.notes) ? (
+                <span className="block text-sm font-normal text-muted">
+                  {[f.dpAmount ? `DP ${formatRp(f.dpAmount)}` : '', f.adjustment ? `${f.adjustment < 0 ? 'Diskon' : 'Tambahan'} ${formatRp(Math.abs(f.adjustment))}` : '', f.notes ? 'ada catatan' : ''].filter(Boolean).join(' · ')}
+                </span>
+              ) : !showPayment ? <span className="block text-sm font-normal text-muted">DP, diskon, catatan</span> : null}
+            </span>
+            <span className="text-muted">{showPayment ? '▲' : '▼'}</span>
           </button>
           {showPayment ? (
             <div className="space-y-3">
@@ -402,6 +484,13 @@ export default function BookingForm() {
               ) : null}
               <Field label={ex?.status === 'COMPLETED' ? 'DP' : 'DP diterima'} htmlFor="dp" error={errors.dpAmount || pricing?.errors.find((e) => e.field === 'dpAmount')?.message}>
                 <MoneyInput id="dp" value={f.dpAmount || null} onChange={(v) => set('dpAmount', v ?? 0)} />
+                {pricing && pricing.total > 0 ? (
+                  <div className="flex gap-2 pt-1">
+                    {([['Tanpa DP', 0], ['50%', Math.round(pricing.total / 2 / 1000) * 1000], ['Lunas', pricing.total]] as [string, number][]).map(([l, v]) => (
+                      <Chip key={l} active={f.dpAmount === v} onClick={() => set('dpAmount', v)}>{l}</Chip>
+                    ))}
+                  </div>
+                ) : null}
               </Field>
               <Field label="Catatan internal" htmlFor="notes">
                 <textarea id="notes" rows={3} className={inputCls} value={f.notes} maxLength={1000} onChange={(e) => set('notes', e.target.value)} />
@@ -417,7 +506,7 @@ export default function BookingForm() {
           <div className="mb-3 space-y-1 text-sm max-h-48 overflow-y-auto">
             {pricing.lines.map((l, i) => (
               <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted truncate">{l.label}{l.kind !== 'ADJUSTMENT' ? ` × ${l.qty}` : ''}</span>
+                <span className="text-muted truncate">{l.label}{l.kind === 'BASE' || (l.kind === 'ADDON' && l.unit === 'HOUR') ? ` · ${durationLabel(f.durationMin)}` : l.kind !== 'ADJUSTMENT' ? ` × ${l.qty}` : ''}</span>
                 <span className="tabular">{formatRp(l.amount)}</span>
               </div>
             ))}
@@ -430,8 +519,11 @@ export default function BookingForm() {
             <div className="text-xs text-muted">Total {showBreakdown ? '▼' : '▲'}</div>
             <div className="text-xl font-semibold tabular">{pricing ? formatRp(pricing.total) : '—'}</div>
           </button>
-          <Button onClick={save} disabled={!canSave} busy={busy} className="px-6">{editing ? 'Simpan' : 'Simpan booking'}</Button>
+          <Button onClick={canSave ? save : goToMissing} busy={busy} className={cx('px-6', !canSave && 'opacity-50 shadow-none')} aria-disabled={!canSave || undefined}>{editing ? 'Simpan' : 'Simpan booking'}</Button>
         </div>
+        {attempted && missing.length ? (
+          <p className="px-2 pt-2 text-xs text-bad" role="alert">Belum lengkap: {missing.map((m) => m[0]).join(', ')}</p>
+        ) : null}
       </BottomBar>
     </>
   );

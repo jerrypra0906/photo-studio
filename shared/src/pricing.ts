@@ -15,7 +15,8 @@ export interface PricingAddon {
 export interface PricingInput {
   typeName: string;
   rate: number;
-  hours: number;
+  /** session length in minutes (e.g. 90); hourly prices are pro-rated and rounded to whole rupiah */
+  minutes: number;
   addons: PricingAddon[];
   adjustment?: number;
   dp?: number;
@@ -44,26 +45,30 @@ export interface PricingResult {
   errors: { field: string; message: string }[];
 }
 
-export function addonLineAmount(a: PricingAddon, hours: number): number {
+/** hourly price × minutes / 60, rounded to whole rupiah */
+export const perMinutes = (hourly: number, minutes: number) => Math.round((hourly * minutes) / 60);
+
+export function addonLineAmount(a: PricingAddon, minutes: number): number {
   const qty = Math.max(1, Math.trunc(a.qty));
-  if (a.unit === 'HOUR') return a.price * hours * qty;
+  if (a.unit === 'HOUR') return perMinutes(a.price, minutes) * qty;
   return a.price * qty;
 }
 
 export function priceBooking(input: PricingInput): PricingResult {
-  const hours = Math.trunc(input.hours);
+  const minutes = Math.trunc(input.minutes);
+  const hours = minutes / 60;
   const adjustment = Math.trunc(input.adjustment ?? 0);
   const dp = Math.trunc(input.dp ?? 0);
   const paid = Math.max(dp, Math.trunc(input.paid ?? dp));
   const lines: PriceLine[] = [];
 
-  const base = input.rate * hours;
+  const base = perMinutes(input.rate, minutes);
   lines.push({ kind: 'BASE', label: input.typeName, qty: hours, unitPrice: input.rate, amount: base, unit: 'HOUR' });
 
   let addonsTotal = 0;
   for (const a of input.addons) {
     const qty = Math.max(1, Math.trunc(a.qty));
-    const amount = addonLineAmount(a, hours);
+    const amount = addonLineAmount(a, minutes);
     addonsTotal += amount;
     lines.push({
       kind: 'ADDON',

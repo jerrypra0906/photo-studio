@@ -1,6 +1,6 @@
 /** WhatsApp template placeholders (PRD §9.3) plus the variant-specific ones. */
 export const PLACEHOLDERS = [
-  'client_name', 'booking_no', 'invoice_no', 'type', 'day_date', 'start', 'end', 'hours', 'photographer',
+  'client_name', 'booking_no', 'invoice_no', 'type', 'day_date', 'start', 'end', 'hours', 'duration', 'photographer',
   'line_items', 'total', 'dp', 'balance', 'bank_name', 'account_no', 'account_holder',
   'studio_name', 'studio_phone', 'studio_address', 'maps_url', 'dp_rule', 'old_schedule', 'cancel_reason',
 ] as const;
@@ -31,7 +31,7 @@ export const DEFAULT_TEMPLATES: Record<'NEW' | 'BALANCE' | 'RESCHEDULE' | 'CANCE
   NEW: `Halo kak {client_name} 😊
 Berikut detail booking di {studio_name}:
 
-📅 {day_date}, {start} – {end} WIB ({hours} jam)
+📅 {day_date}, {start} – {end} WIB ({duration})
 📸 {type}
 Fotografer: {photographer}
 No. booking: {booking_no}
@@ -65,7 +65,7 @@ Pelunasan sebelum photoshoot dimulai ya kak. Terima kasih 🙏`,
 Jadwal booking {booking_no} sudah kami ubah:
 
 Sebelumnya: {old_schedule}
-*Jadwal baru: {day_date}, {start} – {end} WIB ({hours} jam)*
+*Jadwal baru: {day_date}, {start} – {end} WIB ({duration})*
 
 Rincian:
 {line_items}

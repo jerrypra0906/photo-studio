@@ -160,7 +160,7 @@ try {
   });
   await R.test('US-04.4', '−', 'Duration above the 8 h maximum is rejected ("Maks 8 jam")', async () => {
     const r = await book(owner, { date: D, startTime: '09:00', hours: 9 });
-    assert.equal(r.status, 400); assert.equal(r.data.fields.hours, 'Maks 8 jam');
+    assert.equal(r.status, 400); assert.equal(r.data.fields.durationMin, 'Maks 8 jam');
   });
   await R.test('US-05.1', '+', 'A free slot is saved and appears in the schedule for that day', async () => {
     const day = addDays(D, 2);
@@ -249,9 +249,10 @@ try {
     const r = await book(owner, { typeId: PP.id, date: addDays(D, 6), startTime: '15:00', photographerId: HAMJA });
     assert.equal(r.status, 409);
   });
-  await R.test('US-07.3', '−', 'Photo Package without photographer → "Pilih fotografer"', async () => {
+  await R.test('US-07.3', '+', 'Photo Package without photographer saves, flagged "Belum ada fotografer" until assigned', async () => {
     const r = await book(owner, { typeId: PP.id, date: D, startTime: '12:00' });
-    assert.equal(r.status, 400); assert.equal(r.data.fields.photographerId, 'Pilih fotografer');
+    assert.equal(r.status, 201); assert.equal(r.data.needsPhotographer, true);
+    await api(owner, 'POST', `/bookings/${r.data.id}/cancel`, { reason: 'OTHER' });
   });
   await R.test('EDGE-07a', '−', 'An inactive photographer cannot be assigned', async () => {
     const p = (await api(owner, 'POST', '/photographers', { name: `Ex ${run}`, active: false })).data;

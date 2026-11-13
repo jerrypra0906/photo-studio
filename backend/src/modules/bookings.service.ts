@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import type { PoolClient } from 'pg';
 import {
-  BookingInput, PricingAddon, fromWib, normalizePhone, priceBooking, toMinutes, wibDate, wibParts, wibTime,
+  BookingInput, PricingAddon, fromWib, normalizePhone, perMinutes, priceBooking, toMinutes, wibDate, wibParts, wibTime,
 } from '@jes/shared';
 import { AppError, AuthUser, badRequest, conflict, forbidden, notFound } from '../common/http';
 import { Db, Queryable } from '../db';
 
-const BOOKING_COLS = `b.*, b.balance`;
+/** a session type that needs a photographer, still without one (shown as a warning until someone is assigned) */
+const NEEDS_PHOTOGRAPHER = `(b.status = 'CONFIRMED' AND b.photographer_id IS NULL AND EXISTS (SELECT 1 FROM booking_types t WHERE t.id = b.type_id AND t.requires_photographer))`;
+const BOOKING_COLS = `b.*, b.balance, ${NEEDS_PHOTOGRAPHER} AS needs_photographer`;
 
 /** Fields whose change makes a new invoice revision (review C4). */
-const INVOICE_FIELDS = ['typeNameSnap', 'rateSnap', 'hours', 'startAt', 'clientNameSnap', 'clientPhoneSnap', 'photographerNameSnap', 'adjustment', 'adjustmentReason', 'dpAmount', 'total', 'addons'] as const;
+const INVOICE_FIELDS = ['typeNameSnap', 'rateSnap', 'durationMin', 'startAt', 'clientNameSnap', 'clientPhoneSnap', 'photographerNameSnap', 'adjustment', 'adjustmentReason', 'dpAmount', 'total', 'addons'] as const;
 
 export async function enqueueSync(db: Db, c: Queryable, bookingId: string, op: 'UPSERT' | 'DELETE') {
   const s = await db.one(`SELECT gcal_status, gcal_calendar_id FROM settings WHERE id = 1`, [], c);
@@ -35,7 +37,7 @@ export class BookingsService {
 
   // ---------- reads ----------
 
-  async list(q: { q?: string; status?: string; from?: string; to?: string; typeId?: string; includeCancelled?: boolean; toClose?: boolean; limit?: number }) {
+  async list(q: { q?: string; status?: string; from?: string; to?: string; typeId?: string; includeCancelled?: boolean; toClose?: boolean; needsPhotographer?: boolean; limit?: number }) {
     const where: string[] = [];
     const p: unknown[] = [];
     const add = (sql: string, v: unknown) => { p.push(v); where.push(sql.replace('?', `$${p.length}`)); };
@@ -55,7 +57,9 @@ export class BookingsService {
     if (q.to) add(`b.start_at < ?`, new Date(fromWib(q.to).getTime() + 86400_000));
     if (q.typeId) add(`b.type_id = ?`, q.typeId);
     if (q.toClose) where.push(`b.status = 'CONFIRMED' AND b.end_at <= now()`);
-    const order = q.from || q.toClose ? 'b.start_at ASC' : 'b.start_at DESC';
+    // upcoming sessions still waiting for a photographer
+    if (q.needsPhotographer) where.push(`${NEEDS_PHOTOGRAPHER} AND b.end_at > now()`);
+    const order = q.from || q.toClose || q.needsPhotographer ? 'b.start_at ASC' : 'b.start_at DESC';
     return this.db.many(
       `SELECT ${BOOKING_COLS} FROM bookings b ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${order} LIMIT ${Math.min(q.limit ?? 200, 500)}`, p);
   }
@@ -82,7 +86,8 @@ export class BookingsService {
     const s = await this.db.one(`SELECT open_hours, slot_step_min, buffer_min, max_hours FROM settings WHERE id = 1`);
     const bookings = await this.db.many(
       `SELECT b.id, b.booking_no, b.status, b.type_id, b.type_name_snap, b.client_name_snap, b.photographer_id, b.photographer_name_snap,
-              b.start_at, b.end_at, b.block_end_at, b.hours, b.total, b.balance, b.gcal_sync_status
+              b.start_at, b.end_at, b.block_end_at, b.hours, b.duration_min, b.total, b.paid_amount, b.balance, b.gcal_sync_status,
+              ${NEEDS_PHOTOGRAPHER} AS needs_photographer
          FROM bookings b
         WHERE b.status <> 'CANCELLED' AND b.start_at < $2 AND b.block_end_at > $1 AND ($3::uuid IS NULL OR b.id <> $3)
         ORDER BY b.start_at`,
@@ -107,13 +112,14 @@ export class BookingsService {
     const type = await this.db.one(`SELECT * FROM booking_types WHERE id = $1`, [input.typeId], c);
     if (!type || (!type.active && type.id !== existing?.typeId)) throw badRequest('Jenis booking tidak aktif', { typeId: 'Jenis booking tidak aktif' });
 
+    // any length from 15 minutes in steps of 15 (schema) up to the type/studio maximum
     const maxHours = Math.min(type.maxHours, settings.maxHours);
-    if (input.hours < type.minHours || input.hours > maxHours) {
-      throw badRequest(`Durasi ${type.minHours}–${maxHours} jam`, { hours: `Maks ${maxHours} jam` });
+    if (input.durationMin > maxHours * 60) {
+      throw badRequest(`Durasi maksimal ${maxHours} jam`, { durationMin: `Maks ${maxHours} jam` });
     }
 
     const startAt = fromWib(input.date, input.startTime);
-    const endAt = new Date(startAt.getTime() + input.hours * 3600_000);
+    const endAt = new Date(startAt.getTime() + input.durationMin * 60_000);
     const blockEndAt = new Date(endAt.getTime() + settings.bufferMin * 60_000);
     if (toMinutes(input.startTime) % settings.slotStepMin !== 0 && !existing) {
       throw badRequest(`Jam mulai harus kelipatan ${settings.slotStepMin} menit`, { startTime: `Kelipatan ${settings.slotStepMin} menit` });
@@ -128,7 +134,7 @@ export class BookingsService {
     // US-05.4: outside operating hours needs a reason
     const day = settings.openHours[wibParts(startAt).dow];
     const startMin = toMinutes(input.startTime);
-    const endMin = startMin + input.hours * 60;
+    const endMin = startMin + input.durationMin;
     const outside = day.closed || startMin < toMinutes(day.open) || endMin > toMinutes(day.close);
     const afterHours = outside ? (input.afterHoursReason?.trim() || null) : null;
     if (outside && !afterHours) {
@@ -138,7 +144,7 @@ export class BookingsService {
 
     // Photographer (BR-02)
     let photographer = null;
-    if (type.requiresPhotographer && !input.photographerId) throw badRequest('Pilih fotografer', { photographerId: 'Pilih fotografer' });
+    // optional at save time: a type that needs one is flagged (needs_photographer) until someone is assigned
     if (input.photographerId) {
       photographer = await this.db.one(`SELECT * FROM photographers WHERE id = $1`, [input.photographerId], c);
       if (!photographer || (!photographer.active && photographer.id !== existing?.photographerId)) {
@@ -162,11 +168,13 @@ export class BookingsService {
       const snap = keepSnap ? snaps[a.addonId] : undefined;
       if (!m) throw badRequest('Add-on tidak ditemukan');
       if (!snap && (!m.active || !m.applicable)) throw badRequest(`${m.name} tidak tersedia untuk ${type.name}`, { addons: `${m.name} tidak tersedia` });
+      // Owner may set this booking's price for the add-on; Staff keep the saved or master price
+      const custom = user.role === 'OWNER' && a.price != null ? a.price : null;
       return {
         addonId: m.id,
         name: snap?.nameSnap ?? m.name,
         unit: snap?.unitSnap ?? m.unit,
-        price: snap?.priceSnap ?? m.price,
+        price: custom ?? snap?.priceSnap ?? m.price,
         qty: a.qty,
         vendorFee: snap ? snap.vendorFeeSnap : m.vendorFee,
         vendorName: snap ? snap.vendorNameSnap : m.vendorName,
@@ -186,7 +194,7 @@ export class BookingsService {
 
     const rate = keepSnap && existing.typeId === type.id ? existing.rateSnap : type.hourlyRate;
     const paid = existing?.status === 'COMPLETED' ? existing.paidAmount : input.dpAmount;
-    const pricing = priceBooking({ typeName: type.name, rate, hours: input.hours, addons, adjustment, dp: input.dpAmount, paid });
+    const pricing = priceBooking({ typeName: type.name, rate, minutes: input.durationMin, addons, adjustment, dp: input.dpAmount, paid });
     if (pricing.errors.length) {
       const fields = Object.fromEntries(pricing.errors.map((e) => [e.field, e.message]));
       throw badRequest(pricing.errors[0].message, fields);
@@ -266,11 +274,11 @@ export class BookingsService {
       const bookingNo = `JES-${day.slice(2).replace(/-/g, '')}-${String(n).padStart(3, '0')}`;
 
       const b = await this.db.one(
-        `INSERT INTO bookings (booking_no, type_id, type_name_snap, type_keyword_snap, rate_snap, hours, start_at, end_at, block_end_at,
+        `INSERT INTO bookings (booking_no, type_id, type_name_snap, type_keyword_snap, rate_snap, duration_min, start_at, end_at, block_end_at,
                                client_id, client_name_snap, client_phone_snap, photographer_id, photographer_name_snap,
                                adjustment, adjustment_reason, dp_amount, paid_amount, total, notes, after_hours_reason, back_dated, created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$18,$19,$20,$21,$22) RETURNING id`,
-        [bookingNo, p.type.id, p.type.name, p.type.calendarKeyword, p.pricing.lines[0].unitPrice, input.hours, p.startAt, p.endAt, p.blockEndAt,
+        [bookingNo, p.type.id, p.type.name, p.type.calendarKeyword, p.pricing.lines[0].unitPrice, input.durationMin, p.startAt, p.endAt, p.blockEndAt,
          clientId, input.clientName, p.phone, p.photographer?.id ?? null, p.photographer?.name ?? null,
          input.adjustment, input.adjustmentReason, input.dpAmount, p.pricing.total, input.notes?.trim() || null, p.afterHours, p.backDated, user.id], c);
       await this.writeAddons(c, b.id, p);
@@ -306,13 +314,13 @@ export class BookingsService {
       const clientId = await this.upsertClient(c, input.clientName, p.phone, p.startAt);
 
       const after: Record<string, unknown> = {
-        typeNameSnap: p.type.name, rateSnap: p.pricing.lines[0].unitPrice, hours: input.hours, startAt: p.startAt.toISOString(),
+        typeNameSnap: p.type.name, rateSnap: p.pricing.lines[0].unitPrice, durationMin: input.durationMin, startAt: p.startAt.toISOString(),
         clientNameSnap: input.clientName, clientPhoneSnap: p.phone, photographerNameSnap: p.photographer?.name ?? null,
         adjustment: input.adjustment, adjustmentReason: input.adjustmentReason, dpAmount: input.dpAmount, total: p.pricing.total,
         addons: p.addons.map((a) => `${a.name}×${a.qty}@${a.price}`).sort().join(', '),
       };
       const before: Record<string, unknown> = {
-        typeNameSnap: ex.typeNameSnap, rateSnap: ex.rateSnap, hours: ex.hours, startAt: new Date(ex.startAt).toISOString(),
+        typeNameSnap: ex.typeNameSnap, rateSnap: ex.rateSnap, durationMin: ex.durationMin, startAt: new Date(ex.startAt).toISOString(),
         clientNameSnap: ex.clientNameSnap, clientPhoneSnap: ex.clientPhoneSnap, photographerNameSnap: ex.photographerNameSnap,
         adjustment: ex.adjustment, adjustmentReason: ex.adjustmentReason, dpAmount: ex.dpAmount, total: ex.total,
         addons: ex.addons.map((a: any) => `${a.nameSnap}×${a.qty}@${a.priceSnap}`).sort().join(', '),
@@ -325,12 +333,12 @@ export class BookingsService {
       if (paid > p.pricing.total) throw badRequest('Pembayaran melebihi total baru', { dpAmount: 'Pembayaran melebihi total baru' });
 
       await c.query(
-        `UPDATE bookings SET type_id=$2, type_name_snap=$3, type_keyword_snap=$4, rate_snap=$5, hours=$6, start_at=$7, end_at=$8, block_end_at=$9,
+        `UPDATE bookings SET type_id=$2, type_name_snap=$3, type_keyword_snap=$4, rate_snap=$5, duration_min=$6, start_at=$7, end_at=$8, block_end_at=$9,
                 client_id=$10, client_name_snap=$11, client_phone_snap=$12, photographer_id=$13, photographer_name_snap=$14,
                 adjustment=$15, adjustment_reason=$16, dp_amount=$17, paid_amount=$18, total=$19, notes=$20, after_hours_reason=$21,
                 back_dated = back_dated OR $22, invoice_rev=$23, version = version + 1, updated_at = now()
           WHERE id = $1`,
-        [id, p.type.id, p.type.name, p.type.calendarKeyword, p.pricing.lines[0].unitPrice, input.hours, p.startAt, p.endAt, p.blockEndAt,
+        [id, p.type.id, p.type.name, p.type.calendarKeyword, p.pricing.lines[0].unitPrice, input.durationMin, p.startAt, p.endAt, p.blockEndAt,
          clientId, input.clientName, p.phone, p.photographer?.id ?? null, p.photographer?.name ?? null,
          input.adjustment, input.adjustmentReason, input.dpAmount, paid, p.pricing.total, input.notes?.trim() || null, p.afterHours,
          p.backDated && !!rescheduledFrom, rev]);
@@ -373,7 +381,7 @@ export class BookingsService {
       if (ex.photographerId) {
         const ph = await this.db.one(`SELECT * FROM photographers WHERE id = $1`, [ex.photographerId], c);
         const cat = await this.db.one(`SELECT id FROM expense_categories WHERE code = 'PHOTOGRAPHER_FEE'`, [], c);
-        const amount = ph.defaultFee == null ? null : ph.feeUnit === 'HOUR' ? ph.defaultFee * ex.hours : ph.defaultFee;
+        const amount = ph.defaultFee == null ? null : ph.feeUnit === 'HOUR' ? perMinutes(ph.defaultFee, ex.durationMin) : ph.defaultFee;
         await c.query(
           `INSERT INTO expenses (category_id, amount, paid_on, payee, note, booking_id, photographer_id, status, source, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7,'DRAFT','BOOKING_FEE',$8)`,

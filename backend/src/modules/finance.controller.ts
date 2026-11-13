@@ -7,7 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { RevenueBasis, confirmExpenseInput, expenseInput, fromWib, reopenInput, shiftMonth, wibDate, wibMonth } from '@jes/shared';
+import { RevenueBasis, confirmExpenseInput, durationLabel, expenseInput, fromWib, reopenInput, shiftMonth, wibDate, wibMonth } from '@jes/shared';
 import { AppError, AuthUser, Body$, CurrentUser, OwnerOnly, badRequest, conflict, notFound } from '../common/http';
 import { config } from '../config';
 import { Db, Queryable } from '../db';
@@ -37,7 +37,7 @@ export class RecapService {
 
     const bookings = await this.db.many(
       `SELECT b.id, b.booking_no, b.status, b.type_name_snap, b.client_name_snap, b.client_phone_snap, b.start_at, b.end_at, b.hours,
-              b.rate_snap * b.hours AS base, b.adjustment, b.total, b.paid_amount, b.balance,
+              round(b.rate_snap * b.duration_min / 60.0)::bigint AS base, b.adjustment, b.total, b.paid_amount, b.balance,
               coalesce((SELECT sum(line_total) FROM booking_addons a WHERE a.booking_id = b.id), 0)::bigint AS addons
          FROM bookings b
         WHERE b.status IN ('CONFIRMED','COMPLETED') AND wib_month(b.start_at) = $1
@@ -114,7 +114,7 @@ export class RecapService {
     const rev = await this.db.many(
       `SELECT wib_month(b.start_at) AS month, count(*)::int AS bookings,
               sum(b.total)::bigint AS billed, sum(b.paid_amount)::bigint AS collected,
-              sum(b.rate_snap * b.hours)::bigint AS base, sum(b.adjustment)::bigint AS adjustments,
+              sum(round(b.rate_snap * b.duration_min / 60.0))::bigint AS base, sum(b.adjustment)::bigint AS adjustments,
               coalesce(sum(a.addons), 0)::bigint AS addons, sum(b.total - b.paid_amount)::bigint AS receivable,
               count(*) FILTER (WHERE b.start_at > now())::int AS upcoming
          FROM bookings b
@@ -122,7 +122,7 @@ export class RecapService {
         WHERE b.status IN ('CONFIRMED','COMPLETED') AND b.start_at >= $1 AND b.start_at < $2
         GROUP BY 1`, range, q);
     const types = await this.db.many(
-      `SELECT wib_month(start_at) AS month, type_name_snap AS name, sum(rate_snap * hours)::bigint AS amount
+      `SELECT wib_month(start_at) AS month, type_name_snap AS name, sum(round(rate_snap * duration_min / 60.0))::bigint AS amount
          FROM bookings WHERE status IN ('CONFIRMED','COMPLETED') AND start_at >= $1 AND start_at < $2
         GROUP BY 1, 2`, range, q);
     const exp = await this.db.many(
@@ -364,7 +364,7 @@ export class FinanceController {
     checkMonth(month);
     const r = await this.recaps.recap(month);
     const bookings = await this.db.many(
-      `SELECT b.start_at, b.client_name_snap, b.type_name_snap, b.hours, b.total, b.paid_amount,
+      `SELECT b.start_at, b.client_name_snap, b.type_name_snap, b.duration_min, b.total, b.paid_amount,
               (SELECT string_agg(a.name_snap || CASE WHEN a.qty > 1 THEN ' x' || a.qty ELSE '' END, ', ') FROM booking_addons a WHERE a.booking_id = b.id) AS addons
          FROM bookings b WHERE b.status IN ('CONFIRMED','COMPLETED') AND wib_month(b.start_at) = $1 ORDER BY b.start_at`, [month]);
     const expenses = await this.db.many(
@@ -379,7 +379,7 @@ export class FinanceController {
     const rows: unknown[][] = [['Date', 'Client', 'Description', 'Amount']];
     for (const b of bookings) {
       const amt = r.basis === 'BILLED' ? b.total : b.paidAmount;
-      rows.push([wibDate(b.startAt), b.clientNameSnap, `${b.typeNameSnap} ${b.hours} jam${b.addons ? ' + ' + b.addons : ''}`, amt]);
+      rows.push([wibDate(b.startAt), b.clientNameSnap, `${b.typeNameSnap} ${durationLabel(b.durationMin)}${b.addons ? ' + ' + b.addons : ''}`, amt]);
     }
     for (const e of expenses) rows.push([e.paidOn, e.payee ?? '', e.note?.startsWith(e.category) ? e.note : `${e.category}${e.note ? ' — ' + e.note : ''}`, -e.amount]);
     rows.push(['', '', 'Total', r.netProfit]);

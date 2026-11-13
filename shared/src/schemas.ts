@@ -14,11 +14,16 @@ export const loginSchema = z.object({
 export const bookingAddonInput = z.object({
   addonId: uuid,
   qty: z.number().int().min(1).max(100).default(1),
+  /** Owner only: this booking's price for the add-on instead of the master price */
+  price: money.optional().nullable(),
 });
 
 export const bookingInput = z.object({
   typeId: uuid,
-  hours: z.number().int().min(1).max(24),
+  /** session length in minutes, in steps of 15 */
+  durationMin: z.number().int().min(15, 'Durasi minimal 15 menit').max(1440).multipleOf(15, 'Durasi dalam kelipatan 15 menit').optional(),
+  /** older app versions send whole hours */
+  hours: z.number().int().min(1).max(24).optional(),
   date: ymd,
   startTime: hhmm,
   clientName: z.string().trim().min(2, 'Nama klien minimal 2 karakter').max(60),
@@ -34,6 +39,14 @@ export const bookingInput = z.object({
   applyCurrentPrices: z.boolean().optional(),
   /** On create: the Google Calendar inbox item this booking comes from; the booking takes over its event. */
   gcalInboxId: uuid.optional().nullable(),
+}).transform((v, ctx) => {
+  const durationMin = v.durationMin ?? (v.hours != null ? v.hours * 60 : undefined);
+  if (durationMin == null) {
+    ctx.addIssue({ code: 'custom', path: ['durationMin'], message: 'Isi durasi' });
+    return z.NEVER;
+  }
+  const { hours: _legacy, ...rest } = v;
+  return { ...rest, durationMin };
 });
 export type BookingInput = z.infer<typeof bookingInput>;
 

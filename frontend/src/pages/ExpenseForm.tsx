@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { wibDate } from '@jes/shared';
 import { ApiError, api } from '../api';
 import { useCategories } from '../hooks';
-import { Banner, BottomBar, Button, Chip, Confirm, Field, Input, MoneyInput, Page, PageHeader, Spinner, StatusBadge, inputCls, useToast } from '../ui';
+import { Banner, BottomBar, Button, Chip, Confirm, DateChips, Field, Input, MoneyInput, Page, PageHeader, Spinner, StatusBadge, useToast } from '../ui';
 
 /** S16 Add / edit expense — record a cost in ≤ 30 s (L2-4.1). */
 export default function ExpenseForm() {
@@ -31,6 +31,9 @@ export default function ExpenseForm() {
   const [dup, setDup] = useState(false);
   const [del, setDel] = useState(false);
   const loaded = useRef(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  // "Simpan & tambah lagi": stay on the form for the next cost
+  const again = useRef(false);
 
   useEffect(() => {
     const e = existing.data;
@@ -49,6 +52,8 @@ export default function ExpenseForm() {
   // chips: most used first (L2-4.1.2)
   const chips = (cats.data ?? []).filter((c) => c.active || c.id === categoryId).sort((a, b) => b.recentUses - a.recentUses || a.sortOrder - b.sortOrder);
 
+  const focusAmount = () => setTimeout(() => document.getElementById('amt')?.focus(), 0);
+
   const save = async (force = false) => {
     setBusy(true);
     setFormError('');
@@ -65,7 +70,13 @@ export default function ExpenseForm() {
       qc.invalidateQueries({ queryKey: ['recap'] });
       qc.invalidateQueries({ queryKey: ['booking'] });
       toast('Pengeluaran disimpan');
-      nav(-1);
+      if (again.current && !editing) {
+        // keep category and date (usually the same batch), clear the rest
+        setAmount(null); setPayee(''); setNote(''); setBooking(null); setFile(null);
+        if (fileRef.current) fileRef.current.value = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        focusAmount();
+      } else nav(-1);
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.code === 'DUPLICATE_SUSPECT') setDup(true);
@@ -99,14 +110,14 @@ export default function ExpenseForm() {
         {existing.data?.status === 'DRAFT' ? <Banner tone="warn">Draft — menyimpan akan mengonfirmasi biaya ini. <StatusBadge status="DRAFT" /></Banner> : null}
         <Field label="Kategori" error={errors.categoryId}>
           <div className="flex flex-wrap gap-2">
-            {chips.map((c) => <Chip key={c.id} active={categoryId === c.id} onClick={() => { setCategoryId(c.id); if (amount == null && c.defaultAmount) setAmount(c.defaultAmount); }}>{c.name}</Chip>)}
+            {chips.map((c) => <Chip key={c.id} active={categoryId === c.id} onClick={() => { setCategoryId(c.id); if (amount == null && c.defaultAmount) setAmount(c.defaultAmount); focusAmount(); }}>{c.name}</Chip>)}
           </div>
         </Field>
         <Field label="Jumlah" htmlFor="amt" error={amountError}>
           <MoneyInput id="amt" value={amount} onChange={setAmount} invalid={!!amountError} />
         </Field>
-        <Field label="Tanggal dibayar" htmlFor="paidOn" error={errors.paidOn || (paidOn > today ? 'Tanggal tidak boleh di masa depan' : '')}>
-          <input id="paidOn" type="date" max={today} className={inputCls} value={paidOn} onChange={(e) => setPaidOn(e.target.value)} />
+        <Field label="Tanggal dibayar" error={errors.paidOn || (paidOn > today ? 'Tanggal tidak boleh di masa depan' : '')}>
+          <DateChips label="Tanggal dibayar" value={paidOn} today={today} max={today} shortcuts={[[0, 'Hari ini'], [-1, 'Kemarin']]} onChange={setPaidOn} />
         </Field>
         <Field label="Dibayar ke (opsional)" htmlFor="payee"><Input id="payee" placeholder="mis. PLN, Biznet, Hamja" value={payee} onChange={(e) => setPayee(e.target.value)} /></Field>
         <Field label="Catatan (opsional)" htmlFor="note"><Input id="note" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
@@ -130,7 +141,7 @@ export default function ExpenseForm() {
         </Field>
 
         <Field label="Foto bukti (opsional)" hint="JPG, PNG atau PDF, maks 5 MB">
-          <input type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" className="block w-full text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-accent-soft file:px-4 file:text-accent-text"
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" className="block w-full text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-accent-soft file:px-4 file:text-accent-text"
             onChange={(e) => {
               const f = e.target.files?.[0] ?? null;
               if (f && f.size > 5 * 1024 * 1024) { setFormError('Ukuran file maksimal 5 MB'); e.target.value = ''; return; }
@@ -139,7 +150,14 @@ export default function ExpenseForm() {
           {existing.data?.receiptKey && !file ? <a href="#" className="text-sm text-accent-text" onClick={async (ev) => { ev.preventDefault(); const b = await api.blob(`/expenses/${id}/receipt`); window.open(URL.createObjectURL(b)); }}>Lihat bukti tersimpan</a> : null}
         </Field>
       </Page>
-      <BottomBar><Button className="w-full" disabled={!valid} busy={busy} onClick={() => save(false)}>Simpan</Button></BottomBar>
+      <BottomBar>
+        {editing ? <Button className="w-full" disabled={!valid} busy={busy} onClick={() => { again.current = false; save(false); }}>Simpan</Button> : (
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" disabled={!valid || busy} onClick={() => { again.current = true; save(false); }} className="whitespace-nowrap px-3">Simpan & lagi</Button>
+            <Button disabled={!valid} busy={busy} onClick={() => { again.current = false; save(false); }}>Simpan</Button>
+          </div>
+        )}
+      </BottomBar>
 
       <Confirm open={dup} title="Sepertinya duplikat" confirmLabel="Tetap simpan" onClose={() => setDup(false)} onConfirm={() => { setDup(false); save(true); }}>
         <p>Sudah ada pengeluaran dengan kategori, jumlah dan tanggal yang sama. Tetap simpan?</p>

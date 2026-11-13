@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { longDateId, wibDate, wibTime, fromWib } from '@jes/shared';
+import { durationLabel, longDateId, wibDate, wibTime, fromWib } from '@jes/shared';
 import { api } from '../api';
 import { useAuth, useIsOwner } from '../App';
-import { BookingCard, BookingRow } from '../BookingCard';
+import { BookingCard, BookingRow, useNeedsPhotographer } from '../BookingCard';
 import { useSettings } from '../hooks';
 import { useCalendarInbox } from './CalendarInbox';
 import { Banner, Button, Empty, Logo, Page, PayBadge, Spinner, cx } from '../ui';
@@ -52,7 +52,7 @@ function NextUp({ b, now }: { b: BookingRow; now: number }) {
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1.5">
             <div className="font-display text-5xl font-semibold tracking-tight leading-none tabular">{wibTime(b.startAt)}</div>
-            <div className="font-mono text-xs text-muted">→ {wibTime(b.endAt)} · {b.hours} JAM</div>
+            <div className="font-mono text-xs text-muted">→ {wibTime(b.endAt)} · {durationLabel(b.durationMin ?? b.hours * 60).toUpperCase()}</div>
           </div>
           <PayBadge total={b.total} paid={b.paidAmount} />
         </div>
@@ -89,6 +89,8 @@ export default function Home() {
     refetchInterval: 60_000,
   });
   // closing a session records payment, which is Owner-only
+  // in-app alert: upcoming sessions without a photographer yet
+  const needPh = useNeedsPhotographer();
   const toClose = useQuery({ queryKey: ['bookings', 'to-close'], queryFn: () => api.get<BookingRow[]>('/bookings?toClose=true'), enabled: owner });
   const [tipHidden, setTipHidden] = useState(() => localStorage.getItem('jes-gcal-tip') === '1');
 
@@ -135,6 +137,11 @@ export default function Home() {
           </Banner>
         ) : null}
 
+        {needPh.data?.length ? (
+          <Banner tone="warn" action={<Link to="/bookings?needsPhotographer=true" className="font-semibold underline min-h-11 flex items-center">Lihat</Link>}>
+            📷 {needPh.data.length} booking belum ada fotografer — terdekat {needPh.data[0].clientNameSnap}, {longDateId(needPh.data[0].startAt)} {wibTime(needPh.data[0].startAt)}.
+          </Banner>
+        ) : null}
         {inboxCount ? (
           <Banner tone="info" action={<Link to="/calendar-inbox" className="font-semibold underline min-h-11 flex items-center">Tinjau</Link>}>
             {inboxCount} event baru di Google Calendar belum ada di aplikasi.
